@@ -28,8 +28,13 @@ export async function searchPlayers(term: string): Promise<SearchResult[]> {
 }
 
 export async function getPlayerDetails(playerId: string | number): Promise<any> {
-  const url = `https://api-web.nhle.com/v1/player/${playerId}/landing`;
-  const res = await fetch(url);
+  const id = String(playerId).trim();
+
+  if (!/^\d+$/.test(id)) {
+    throw new Error("invalid player id");
+  }
+
+  const res = await fetch(`/api/nhl/player/${id}`);
   if (!res.ok) throw new Error("details failed");
   return res.json();
 }

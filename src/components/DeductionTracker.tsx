@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Opponent } from "../lib/types";
 import { loadOpponents, makeId, saveOpponents } from "../lib/storage";
 import { OpponentSetup } from "./OpponentSetup";
@@ -6,17 +6,17 @@ import { OpponentDeductionCard } from "./OpponentDeductionCard";
 
 export function DeductionTracker() {
   const [opponents, setOpponents] = useState<Opponent[]>([]);
-  const hydrated = useRef(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     setOpponents(loadOpponents());
-    hydrated.current = true;
+    setIsLoaded(true);
   }, []);
 
   useEffect(() => {
-    if (!hydrated.current) return;
+    if (!isLoaded) return;
     saveOpponents(opponents);
-  }, [opponents]);
+  }, [isLoaded, opponents]);
 
   function addOpponent(name: string) {
     setOpponents((prev) => [...prev, { id: makeId(), name, clues: [] }]);

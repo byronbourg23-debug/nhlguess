@@ -7,6 +7,9 @@ type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
 };
 
+const PLAYER_DETAILS_ROUTE = /^\/api\/nhl\/player\/(\d+)$/;
+const PLAYER_DETAILS_URL = "https://api-web.nhle.com/v1/player";
+
 let serverEntryPromise: Promise<ServerEntry> | undefined;
 
 async function getServerEntry(): Promise<ServerEntry> {
@@ -44,9 +47,42 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+async function handleNhlPlayerDetails(request: Request): Promise<Response | undefined> {
+  const url = new URL(request.url);
+  const match = url.pathname.match(PLAYER_DETAILS_ROUTE);
+
+  if (!match) return undefined;
+
+  if (request.method !== "GET") {
+    return new Response("Method not allowed", {
+      status: 405,
+      headers: { allow: "GET" },
+    });
+  }
+
+  const response = await fetch(`${PLAYER_DETAILS_URL}/${match[1]}/landing`);
+
+  if (!response.ok) {
+    return Response.json(
+      { error: "Could not load player details. Try again." },
+      { status: response.status },
+    );
+  }
+
+  return new Response(await response.text(), {
+    headers: {
+      "cache-control": "no-store",
+      "content-type": "application/json; charset=utf-8",
+    },
+  });
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const playerDetailsResponse = await handleNhlPlayerDetails(request);
+      if (playerDetailsResponse) return playerDetailsResponse;
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

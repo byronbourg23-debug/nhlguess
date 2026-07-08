@@ -11,6 +11,7 @@ export function PlayerSearchInput({ onSelect }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
+  const [selectedTerm, setSelectedTerm] = useState("");
   const seq = useRef(0);
 
   const runSearch = useCallback(async (q: string) => {
@@ -32,7 +33,7 @@ export function PlayerSearchInput({ onSelect }: Props) {
 
   useEffect(() => {
     const q = term.trim();
-    if (q.length < 2) {
+    if (q.length < 2 || q === selectedTerm) {
       seq.current++;
       setResults([]);
       setError(null);
@@ -43,7 +44,7 @@ export function PlayerSearchInput({ onSelect }: Props) {
       runSearch(q);
     }, 250);
     return () => clearTimeout(t);
-  }, [term, runSearch]);
+  }, [selectedTerm, term, runSearch]);
 
   return (
     <div className="w-full">
@@ -52,6 +53,7 @@ export function PlayerSearchInput({ onSelect }: Props) {
         value={term}
         onChange={(e) => {
           setTerm(e.target.value);
+          setSelectedTerm("");
           setTouched(true);
         }}
         placeholder="Search NHL player (e.g. McDavid)"
@@ -82,6 +84,8 @@ export function PlayerSearchInput({ onSelect }: Props) {
                 onClick={() => {
                   onSelect(r.playerId);
                   setTerm(r.name);
+                  setSelectedTerm(r.name);
+                  setTouched(false);
                   setResults([]);
                 }}
                 className="flex w-full items-center justify-between px-3 py-3 text-left hover:bg-accent"
