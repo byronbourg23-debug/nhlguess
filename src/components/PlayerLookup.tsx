@@ -4,8 +4,12 @@ import { PlayerInfoCard } from "./PlayerInfoCard";
 import { getPlayerDetails, normalizePlayerData } from "../lib/nhlApi";
 import type { NHLPlayer } from "../lib/types";
 
-export function PlayerLookup() {
-  const [player, setPlayer] = useState<NHLPlayer | null>(null);
+type PlayerLookupProps = {
+  selectedPlayer: NHLPlayer | null;
+  setSelectedPlayer: (player: NHLPlayer | null) => void;
+};
+
+export function PlayerLookup({ selectedPlayer, setSelectedPlayer }: PlayerLookupProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastId, setLastId] = useState<string | null>(null);
@@ -13,10 +17,10 @@ export function PlayerLookup() {
   async function loadPlayer(playerId: string) {
     setLoading(true);
     setError(null);
-    setPlayer(null);
+    setSelectedPlayer(null);
     try {
       const raw = await getPlayerDetails(playerId);
-      setPlayer(normalizePlayerData(raw));
+      setSelectedPlayer(normalizePlayerData(raw));
     } catch {
       setError("Could not load player details. Try again.");
     } finally {
@@ -47,7 +51,7 @@ export function PlayerLookup() {
           )}
         </div>
       )}
-      {player && <PlayerInfoCard player={player} />}
+      {selectedPlayer && <PlayerInfoCard player={selectedPlayer} />}
     </div>
   );
 }

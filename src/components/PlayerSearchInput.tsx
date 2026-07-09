@@ -59,7 +59,7 @@ export function PlayerSearchInput({ onSelect }: Props) {
         placeholder="Search NHL player (e.g. McDavid)"
         className="w-full rounded-md border border-border bg-background px-3 py-3 text-base outline-none focus:ring-2 focus:ring-ring"
       />
-      {loading && <div className="mt-2 text-sm text-muted-foreground">Searching…</div>}
+      {loading && <div className="mt-2 text-sm text-muted-foreground">Searching...</div>}
       {error && (
         <div className="mt-2 flex items-center justify-between gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           <span>{error}</span>
@@ -92,7 +92,7 @@ export function PlayerSearchInput({ onSelect }: Props) {
               >
                 <span className="font-medium">{r.name}</span>
                 <span className="text-xs text-muted-foreground">
-                  {r.teamAbbrev ?? ""} {r.positionCode ? `· ${r.positionCode}` : ""}
+                  {r.teamAbbrev ?? ""} {r.positionCode ? `- ${r.positionCode}` : ""}
                 </span>
               </button>
             </li>

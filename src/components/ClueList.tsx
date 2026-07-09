@@ -110,7 +110,7 @@ function ClueRow({
           onClick={() => onDelete(clue.id)}
           className="rounded border border-border px-2 py-1 text-xs text-red-600"
         >
-          ×
+          x
         </button>
       </div>
     </li>

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { PlayerLookup } from "../components/PlayerLookup";
 import { DeductionTracker } from "../components/DeductionTracker";
+import type { NHLPlayer } from "../lib/types";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -11,6 +12,7 @@ type Tab = "lookup" | "tracker";
 
 function Index() {
   const [tab, setTab] = useState<Tab>("lookup");
+  const [selectedPlayer, setSelectedPlayer] = useState<NHLPlayer | null>(null);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -28,7 +30,11 @@ function Index() {
         </nav>
       </header>
       <main className="mx-auto max-w-xl px-4 py-4">
-        {tab === "lookup" ? <PlayerLookup /> : <DeductionTracker />}
+        {tab === "lookup" ? (
+          <PlayerLookup selectedPlayer={selectedPlayer} setSelectedPlayer={setSelectedPlayer} />
+        ) : (
+          <DeductionTracker />
+        )}
       </main>
     </div>
   );

@@ -61,7 +61,7 @@ export function QuickClueButtons({ onAdd }: Props) {
       {active && (
         <div className="mt-2 rounded-md border border-border bg-muted p-2">
           <div className="text-xs text-muted-foreground">
-            Add “{active.label}” as:
+            Add "{active.label}" as:
           </div>
           <div className="mt-2 flex flex-wrap gap-2">
             <button

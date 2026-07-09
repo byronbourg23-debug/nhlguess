@@ -16,7 +16,7 @@ export function PlayerInfoCard({ player }: { player: NHLPlayer }) {
     <div className="mt-4 rounded-lg border border-border bg-card p-4">
       <h2 className="text-lg font-semibold">{player.fullName}</h2>
       <p className="text-sm text-muted-foreground">
-        {player.team} · #{String(player.jerseyNumber)} · {player.position}
+        {player.team} - #{String(player.jerseyNumber)} - {player.position}
       </p>
 
       <h3 className="mt-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
