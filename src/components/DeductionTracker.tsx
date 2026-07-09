@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Opponent } from "../lib/types";
-import { loadOpponents, makeId, saveOpponents } from "../lib/storage";
+import { loadOpponents, makeEmptyDeductionRow, makeId, saveOpponents } from "../lib/storage";
 import { OpponentSetup } from "./OpponentSetup";
 import { OpponentDeductionCard } from "./OpponentDeductionCard";
 
@@ -19,7 +19,7 @@ export function DeductionTracker() {
   }, [isLoaded, opponents]);
 
   function addOpponent(name: string) {
-    setOpponents((prev) => [...prev, { id: makeId(), name, clues: [] }]);
+    setOpponents((prev) => [...prev, { id: makeId(), name, rows: [makeEmptyDeductionRow()] }]);
   }
   function updateOpponent(o: Opponent) {
     setOpponents((prev) => prev.map((p) => (p.id === o.id ? o : p)));
@@ -36,7 +36,7 @@ export function DeductionTracker() {
       <OpponentSetup onAdd={addOpponent} onReset={reset} hasAny={opponents.length > 0} />
       {opponents.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          Add opponents to start tracking clues.
+          Add opponents to start tracking deduction rows.
         </div>
       ) : (
         opponents.map((o) => (

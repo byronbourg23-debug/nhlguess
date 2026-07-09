@@ -31,14 +31,14 @@ export function OpponentSetup({ onAdd, onReset, hasAny }: Props) {
           type="submit"
           className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
         >
-          Add
+          Add Opponent
         </button>
       </form>
       {hasAny && (
         <button
           type="button"
           onClick={() => {
-            if (confirm("Reset tracker? This deletes all opponents and clues.")) onReset();
+            if (confirm("Reset tracker? This deletes all opponents and rows.")) onReset();
           }}
           className="mt-3 w-full rounded-md border border-red-300 px-3 py-2 text-sm text-red-600"
         >

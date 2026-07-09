@@ -1,27 +1,27 @@
-export type ClueType = "known" | "ruled_out" | "maybe";
-
-export type ClueCategory =
+export type DeductionQuestionType =
   | "position"
   | "team"
   | "conference"
-  | "country_nationality"
+  | "division"
+  | "hand"
+  | "top6"
+  | "top4"
+  | "country"
   | "age"
-  | "shoots_catches"
-  | "stats_awards"
+  | "jerseyNumber"
   | "other";
 
-export interface Clue {
+export interface DeductionRow {
   id: string;
-  text: string;
-  type: ClueType;
-  category?: ClueCategory;
-  createdAt: number;
+  questionType: DeductionQuestionType;
+  customQuestionText?: string;
+  answer: string;
 }
 
 export interface Opponent {
   id: string;
   name: string;
-  clues: Clue[];
+  rows: DeductionRow[];
 }
 
 export interface GoalieStats {
