@@ -1,5 +1,6 @@
 import { useState } from "react";
-import type { ClueType } from "../lib/types";
+import { CLUE_CATEGORY_OPTIONS } from "../lib/clueCategories";
+import type { ClueCategory, ClueType } from "../lib/types";
 
 interface QuickOption {
   label: string;
@@ -22,11 +23,12 @@ const OPTIONS: QuickOption[] = [
 ];
 
 interface Props {
-  onAdd: (text: string, type: ClueType) => void;
+  onAdd: (text: string, type: ClueType, category?: ClueCategory) => void;
 }
 
 export function QuickClueButtons({ onAdd }: Props) {
   const [active, setActive] = useState<QuickOption | null>(null);
+  const [category, setCategory] = useState<ClueCategory | "">("");
 
   function pick(type: ClueType) {
     if (!active) return;
@@ -36,8 +38,9 @@ export function QuickClueButtons({ onAdd }: Props) {
         : type === "ruled_out"
           ? active.ruledOut
           : `Maybe ${active.known.toLowerCase()}`;
-    onAdd(text, type);
+    onAdd(text, type, category || undefined);
     setActive(null);
+    setCategory("");
   }
 
   return (
@@ -63,6 +66,18 @@ export function QuickClueButtons({ onAdd }: Props) {
           <div className="text-xs text-muted-foreground">
             Add "{active.label}" as:
           </div>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value as ClueCategory | "")}
+            className="mt-2 w-full rounded-md border border-border bg-background px-2 py-2 text-xs"
+          >
+            <option value="">No category</option>
+            {CLUE_CATEGORY_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
           <div className="mt-2 flex flex-wrap gap-2">
             <button
               type="button"
@@ -87,7 +102,10 @@ export function QuickClueButtons({ onAdd }: Props) {
             </button>
             <button
               type="button"
-              onClick={() => setActive(null)}
+              onClick={() => {
+                setActive(null);
+                setCategory("");
+              }}
               className="rounded border border-border px-3 py-1.5 text-xs"
             >
               Cancel

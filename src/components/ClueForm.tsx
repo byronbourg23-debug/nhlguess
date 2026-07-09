@@ -1,19 +1,21 @@
 import { useState } from "react";
-import type { ClueType } from "../lib/types";
+import { CLUE_CATEGORY_OPTIONS } from "../lib/clueCategories";
+import type { ClueCategory, ClueType } from "../lib/types";
 
 interface Props {
-  onAdd: (text: string, type: ClueType) => void;
+  onAdd: (text: string, type: ClueType, category?: ClueCategory) => void;
 }
 
 export function ClueForm({ onAdd }: Props) {
   const [text, setText] = useState("");
   const [type, setType] = useState<ClueType>("known");
+  const [category, setCategory] = useState<ClueCategory | "">("");
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const t = text.trim();
     if (!t) return;
-    onAdd(t, type);
+    onAdd(t, type, category || undefined);
     setText("");
   }
 
@@ -26,7 +28,7 @@ export function ClueForm({ onAdd }: Props) {
         placeholder="Add a clue (e.g. Canadian, Not on Oilers)"
         className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
       />
-      <div className="flex gap-2">
+      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
         <select
           value={type}
           onChange={(e) => setType(e.target.value as ClueType)}
@@ -36,9 +38,21 @@ export function ClueForm({ onAdd }: Props) {
           <option value="ruled_out">Ruled Out / No</option>
           <option value="maybe">Maybe / Unsure</option>
         </select>
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value as ClueCategory | "")}
+          className="rounded-md border border-border bg-background px-2 py-2 text-sm"
+        >
+          <option value="">No category</option>
+          {CLUE_CATEGORY_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
         <button
           type="submit"
-          className="flex-1 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
+          className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
         >
           Add clue
         </button>

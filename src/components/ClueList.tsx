@@ -1,4 +1,9 @@
 import { useState } from "react";
+import {
+  CLUE_CATEGORY_OPTIONS,
+  NO_CLUE_CATEGORY_LABEL,
+  getClueCategoryLabel,
+} from "../lib/clueCategories";
 import type { Clue, ClueType } from "../lib/types";
 
 const styles: Record<ClueType, { title: string; chip: string; border: string }> = {
@@ -39,14 +44,41 @@ export function ClueList({ type, clues, onEdit, onDelete }: Props) {
       {clues.length === 0 ? (
         <div className="py-1 text-xs text-muted-foreground">None yet.</div>
       ) : (
-        <ul className="divide-y divide-border">
-          {clues.map((c) => (
-            <ClueRow key={c.id} clue={c} onEdit={onEdit} onDelete={onDelete} />
+        <div className="space-y-2">
+          {groupCluesByCategory(clues).map((group) => (
+            <div key={group.label}>
+              <div className="mb-1 text-xs font-semibold text-muted-foreground">
+                {group.label}
+              </div>
+              <ul className="divide-y divide-border">
+                {group.clues.map((c) => (
+                  <ClueRow key={c.id} clue={c} onEdit={onEdit} onDelete={onDelete} />
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );
+}
+
+function groupCluesByCategory(clues: Clue[]): { label: string; clues: Clue[] }[] {
+  const groups = CLUE_CATEGORY_OPTIONS.map((option) => ({
+    label: getClueCategoryLabel(option.value),
+    clues: clues.filter((clue) => clue.category === option.value),
+  })).filter((group) => group.clues.length > 0);
+
+  const uncategorized = clues.filter(
+    (clue) =>
+      !clue.category || !CLUE_CATEGORY_OPTIONS.some((option) => option.value === clue.category),
+  );
+
+  if (uncategorized.length > 0) {
+    groups.push({ label: NO_CLUE_CATEGORY_LABEL, clues: uncategorized });
+  }
+
+  return groups;
 }
 
 function ClueRow({

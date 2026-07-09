@@ -1,9 +1,20 @@
 export type ClueType = "known" | "ruled_out" | "maybe";
 
+export type ClueCategory =
+  | "position"
+  | "team"
+  | "conference"
+  | "country_nationality"
+  | "age"
+  | "shoots_catches"
+  | "stats_awards"
+  | "other";
+
 export interface Clue {
   id: string;
   text: string;
   type: ClueType;
+  category?: ClueCategory;
   createdAt: number;
 }
 

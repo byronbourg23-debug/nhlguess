@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Clue, ClueType, Opponent } from "../lib/types";
+import type { Clue, ClueCategory, ClueType, Opponent } from "../lib/types";
 import { ClueForm } from "./ClueForm";
 import { ClueList } from "./ClueList";
 import { QuickClueButtons } from "./QuickClueButtons";
@@ -15,8 +15,8 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
   const [renaming, setRenaming] = useState(false);
   const [nameVal, setNameVal] = useState(opponent.name);
 
-  function addClue(text: string, type: ClueType) {
-    const clue: Clue = { id: makeId(), text, type, createdAt: Date.now() };
+  function addClue(text: string, type: ClueType, category?: ClueCategory) {
+    const clue: Clue = { id: makeId(), text, type, category, createdAt: Date.now() };
     onUpdate({ ...opponent, clues: [clue, ...opponent.clues] });
   }
   function editClue(id: string, text: string) {
