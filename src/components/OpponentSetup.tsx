@@ -18,20 +18,20 @@ export function OpponentSetup({ onAdd, onReset, hasAny }: Props) {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <h2 className="text-base font-semibold">Opponents</h2>
-      <form onSubmit={submit} className="mt-2 flex gap-2">
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+      <h2 className="text-base font-semibold tracking-tight">Opponents</h2>
+      <form onSubmit={submit} className="mt-3 flex flex-col gap-2 sm:flex-row">
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Add opponent name"
-          className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm"
+          className="min-w-0 flex-1 rounded-md border border-border bg-background px-3 py-2.5 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
         />
         <button
           type="submit"
-          className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
+          className="inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition-colors hover:bg-emerald-700"
         >
-          Add Opponent
+          ADD
         </button>
       </form>
       {hasAny && (
@@ -40,9 +40,9 @@ export function OpponentSetup({ onAdd, onReset, hasAny }: Props) {
           onClick={() => {
             if (confirm("Reset tracker? This deletes all opponents and rows.")) onReset();
           }}
-          className="mt-3 w-full rounded-md border border-red-300 px-3 py-2 text-sm text-red-600"
+          className="mt-3 w-full rounded-md border border-red-300 bg-red-50 px-3 py-2.5 text-sm font-bold text-red-700 shadow-sm transition-colors hover:bg-red-100"
         >
-          Reset Tracker
+          Clear ALL
         </button>
       )}
     </div>

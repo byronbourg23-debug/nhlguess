@@ -24,6 +24,14 @@ export interface Opponent {
   rows: DeductionRow[];
 }
 
+export interface SavedSession {
+  id: string;
+  name: string;
+  opponents: Opponent[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface GoalieStats {
   gamesPlayed: number | string;
   wins: number | string;

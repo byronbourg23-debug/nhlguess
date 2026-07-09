@@ -16,9 +16,9 @@ function Index() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-10 border-b border-border bg-background">
+      <header className="sticky top-0 z-10 border-b border-border bg-card/95 shadow-sm">
         <div className="mx-auto max-w-xl px-4 pt-4">
-          <h1 className="text-lg font-bold">NHL Guessing Helper</h1>
+          <h1 className="text-lg font-bold tracking-tight">NHL Guessing Helper</h1>
         </div>
         <nav className="mx-auto mt-3 flex max-w-xl gap-1 px-4">
           <TabButton active={tab === "lookup"} onClick={() => setTab("lookup")}>
@@ -29,7 +29,7 @@ function Index() {
           </TabButton>
         </nav>
       </header>
-      <main className="mx-auto max-w-xl px-4 py-4">
+      <main className="mx-auto max-w-xl px-4 py-5 sm:py-6">
         {tab === "lookup" ? (
           <PlayerLookup selectedPlayer={selectedPlayer} setSelectedPlayer={setSelectedPlayer} />
         ) : (

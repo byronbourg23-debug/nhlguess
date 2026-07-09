@@ -57,7 +57,7 @@ export function PlayerSearchInput({ onSelect }: Props) {
           setTouched(true);
         }}
         placeholder="Search NHL player (e.g. McDavid)"
-        className="w-full rounded-md border border-border bg-background px-3 py-3 text-base text-black outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
+        className="w-full rounded-lg border border-border bg-card px-3 py-3 text-base text-black shadow-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
       />
       {loading && <div className="mt-2 text-sm text-black">Searching...</div>}
       {error && (
@@ -76,7 +76,7 @@ export function PlayerSearchInput({ onSelect }: Props) {
         <div className="mt-2 text-sm text-black">No players found.</div>
       )}
       {results.length > 0 && (
-        <ul className="mt-2 divide-y divide-border rounded-md border border-border">
+        <ul className="mt-2 divide-y divide-border overflow-hidden rounded-lg border border-border bg-card shadow-sm">
           {results.map((r) => (
             <li key={r.playerId}>
               <button
@@ -88,10 +88,10 @@ export function PlayerSearchInput({ onSelect }: Props) {
                   setTouched(false);
                   setResults([]);
                 }}
-                className="flex w-full items-center justify-between px-3 py-3 text-left text-black hover:bg-accent"
+                className="flex w-full items-center justify-between gap-3 px-3 py-3 text-left text-black transition-colors hover:bg-accent"
               >
-                <span className="font-medium">{r.name}</span>
-                <span className="text-xs text-black">
+                <span className="min-w-0 font-medium">{r.name}</span>
+                <span className="shrink-0 text-xs text-black">
                   {r.teamAbbrev ?? ""} {r.positionCode ? `- ${r.positionCode}` : ""}
                 </span>
               </button>

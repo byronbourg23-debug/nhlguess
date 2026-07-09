@@ -76,6 +76,15 @@ interface Props {
   onDelete: (id: string) => void;
 }
 
+const addButtonClass =
+  "inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition-colors hover:bg-emerald-700";
+
+const dangerButtonClass =
+  "inline-flex items-center justify-center rounded-md border border-red-300 bg-red-50 px-3 py-2.5 text-sm font-bold text-red-700 shadow-sm transition-colors hover:bg-red-100";
+
+const fieldClass =
+  "w-full min-w-0 rounded-md border border-border bg-background px-3 py-2.5 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring";
+
 export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
   function addRow() {
     onUpdate({ ...opponent, rows: [...opponent.rows, makeEmptyDeductionRow()] });
@@ -101,107 +110,96 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card p-3 sm:p-4">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-base font-semibold">{opponent.name}</h3>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={addRow}
-            className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
-          >
-            Add
+    <div className="rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h3 className="min-w-0 text-base font-semibold tracking-tight">{opponent.name}</h3>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={addRow} className={addButtonClass}>
+            ADD
           </button>
           <button
             type="button"
             onClick={() => {
               if (confirm(`Remove ${opponent.name}?`)) onDelete(opponent.id);
             }}
-            className="rounded-md border border-border px-3 py-2 text-sm text-red-600"
+            className={dangerButtonClass}
           >
             Remove
           </button>
         </div>
       </div>
 
-      <div className="mt-3 overflow-x-auto">
-        <table className="w-full min-w-[520px] border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="py-2 pr-2 font-semibold">Question</th>
-              <th className="py-2 pr-2 font-semibold">Answer</th>
-              <th className="py-2 text-right font-semibold"> </th>
-            </tr>
-          </thead>
-          <tbody>
-            {opponent.rows.map((row) => (
-              <tr key={row.id} className="border-b border-border last:border-0">
-                <td className="py-2 pr-2 align-top">
-                  <div className="flex flex-col gap-2">
-                    <select
-                      value={row.questionType}
-                      onChange={(e) =>
-                        updateQuestionType(row.id, e.target.value as DeductionQuestionType)
-                      }
-                      className="w-full rounded-md border border-border bg-background px-2 py-2"
-                    >
-                      {QUESTION_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    {row.questionType === "other" ? (
-                      <input
-                        type="text"
-                        value={row.customQuestionText ?? ""}
-                        onChange={(e) =>
-                          updateRow(row.id, { customQuestionText: e.target.value })
-                        }
-                        placeholder="Custom question"
-                        className="w-full rounded-md border border-border bg-background px-2 py-2"
-                      />
-                    ) : null}
-                  </div>
-                </td>
-                <td className="py-2 pr-2 align-top">
-                  <AnswerInput row={row} onChange={(answer) => updateRow(row.id, { answer })} />
-                </td>
-                <td className="py-2 text-right align-top">
-                  <button
-                    type="button"
-                    onClick={() => deleteRow(row.id)}
-                    className="rounded border border-border px-2 py-2 text-xs text-red-600"
-                    aria-label="Delete row"
+      <div className="mt-4">
+        <div className="hidden grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2.75rem] gap-3 border-b border-border pb-2 text-left text-xs font-bold uppercase tracking-wide text-muted-foreground sm:grid">
+          <div>Question</div>
+          <div>Answer</div>
+          <div aria-hidden="true" />
+        </div>
+        <div className="divide-y divide-border">
+          {opponent.rows.map((row) => (
+            <div
+              key={row.id}
+              className="grid min-w-0 gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2.75rem] sm:items-start"
+            >
+              <div className="min-w-0">
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-muted-foreground sm:hidden">
+                  Question
+                </label>
+                <div className="flex min-w-0 flex-col gap-2">
+                  <select
+                    value={row.questionType}
+                    onChange={(e) =>
+                      updateQuestionType(row.id, e.target.value as DeductionQuestionType)
+                    }
+                    className={fieldClass}
                   >
-                    x
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    {QUESTION_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {row.questionType === "other" ? (
+                    <input
+                      type="text"
+                      value={row.customQuestionText ?? ""}
+                      onChange={(e) => updateRow(row.id, { customQuestionText: e.target.value })}
+                      placeholder="Custom question"
+                      className={fieldClass}
+                    />
+                  ) : null}
+                </div>
+              </div>
+              <div className="min-w-0">
+                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-muted-foreground sm:hidden">
+                  Answer
+                </label>
+                <AnswerInput row={row} onChange={(answer) => updateRow(row.id, { answer })} />
+              </div>
+              <div className="flex justify-end sm:justify-center">
+                <button
+                  type="button"
+                  onClick={() => deleteRow(row.id)}
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-red-300 bg-red-50 text-sm font-bold leading-none text-red-700 shadow-sm transition-colors hover:bg-red-100"
+                  aria-label="Delete row"
+                >
+                  x
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
-function AnswerInput({
-  row,
-  onChange,
-}: {
-  row: DeductionRow;
-  onChange: (answer: string) => void;
-}) {
+function AnswerInput({ row, onChange }: { row: DeductionRow; onChange: (answer: string) => void }) {
   const options = ANSWER_OPTIONS[row.questionType];
 
   if (options) {
     return (
-      <select
-        value={row.answer}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-md border border-border bg-background px-2 py-2"
-      >
+      <select value={row.answer} onChange={(e) => onChange(e.target.value)} className={fieldClass}>
         <option value="">Select answer</option>
         {options.map((option) => (
           <option key={option} value={option}>
@@ -218,7 +216,7 @@ function AnswerInput({
       value={row.answer}
       onChange={(e) => onChange(e.target.value)}
       placeholder={row.questionType === "other" ? "Answer" : "Answer"}
-      className="w-full rounded-md border border-border bg-background px-2 py-2"
+      className={fieldClass}
     />
   );
 }

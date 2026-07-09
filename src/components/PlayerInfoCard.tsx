@@ -3,20 +3,26 @@ import type { NHLPlayer } from "../lib/types";
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <tr className="border-b border-border last:border-b-0">
-      <th className="w-1/2 px-3 py-2 text-left text-sm font-medium text-black">{label}</th>
-      <td className="px-3 py-2 text-right text-sm font-semibold text-black">{value}</td>
+      <th className="w-1/2 px-3 py-2.5 text-left align-top text-sm font-medium text-black">
+        {label}
+      </th>
+      <td className="break-words px-3 py-2.5 text-right align-top text-sm font-semibold text-black">
+        {value}
+      </td>
     </tr>
   );
 }
 
 export function PlayerInfoCard({ player }: { player: NHLPlayer }) {
   return (
-    <section className="mt-4 rounded-lg border border-border bg-card p-4 text-black">
-      <h2 className="text-lg font-semibold text-black">Basic Info</h2>
-      <div className="mt-3 overflow-hidden rounded-md border border-border">
+    <section className="mt-4 rounded-xl border border-border bg-card p-4 text-black shadow-sm">
+      <div>
+        <h2 className="text-xl font-bold tracking-tight text-black">{player.fullName}</h2>
+        <p className="mt-1 text-sm font-medium text-black">Basic Info</p>
+      </div>
+      <div className="mt-3 overflow-hidden rounded-lg border border-border">
         <table className="w-full border-collapse">
           <tbody>
-            <Row label="Full Name" value={player.fullName} />
             <Row label="Current Team" value={player.team} />
             <Row label="Number" value={String(player.jerseyNumber)} />
             <Row label="Position" value={player.position} />
