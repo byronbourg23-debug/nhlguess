@@ -34,17 +34,17 @@ export function PlayerLookup({ selectedPlayer, setSelectedPlayer }: PlayerLookup
   }
 
   return (
-    <div>
+    <div className="text-black">
       <PlayerSearchInput onSelect={handleSelect} />
-      {loading && <div className="mt-4 text-sm text-muted-foreground">Loading player…</div>}
+      {loading && <div className="mt-4 text-sm text-black">Loading player…</div>}
       {error && (
-        <div className="mt-4 flex items-center justify-between gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div className="mt-4 flex items-center justify-between gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-black">
           <span>{error}</span>
           {lastId && (
             <button
               type="button"
               onClick={() => loadPlayer(lastId)}
-              className="rounded border border-red-300 bg-white px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+              className="rounded border border-red-300 bg-white px-2 py-1 text-xs font-medium text-black hover:bg-red-100"
             >
               Retry
             </button>

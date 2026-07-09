@@ -37,9 +37,12 @@ export interface NHLPlayer {
   id: number;
   fullName: string;
   team: string;
+  conference: string;
+  division: string;
   position: string;
   jerseyNumber: number | string;
   shootsCatches: string;
+  previousTeams: string;
   height: string;
   weight: string;
   age: number | string;

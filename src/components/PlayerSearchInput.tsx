@@ -57,23 +57,23 @@ export function PlayerSearchInput({ onSelect }: Props) {
           setTouched(true);
         }}
         placeholder="Search NHL player (e.g. McDavid)"
-        className="w-full rounded-md border border-border bg-background px-3 py-3 text-base outline-none focus:ring-2 focus:ring-ring"
+        className="w-full rounded-md border border-border bg-background px-3 py-3 text-base text-black outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
       />
-      {loading && <div className="mt-2 text-sm text-muted-foreground">Searching...</div>}
+      {loading && <div className="mt-2 text-sm text-black">Searching...</div>}
       {error && (
-        <div className="mt-2 flex items-center justify-between gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <div className="mt-2 flex items-center justify-between gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-black">
           <span>{error}</span>
           <button
             type="button"
             onClick={() => runSearch(term.trim())}
-            className="rounded border border-red-300 bg-white px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+            className="rounded border border-red-300 bg-white px-2 py-1 text-xs font-medium text-black hover:bg-red-100"
           >
             Retry
           </button>
         </div>
       )}
       {!loading && !error && touched && term.trim().length >= 2 && results.length === 0 && (
-        <div className="mt-2 text-sm text-muted-foreground">No players found.</div>
+        <div className="mt-2 text-sm text-black">No players found.</div>
       )}
       {results.length > 0 && (
         <ul className="mt-2 divide-y divide-border rounded-md border border-border">
@@ -88,10 +88,10 @@ export function PlayerSearchInput({ onSelect }: Props) {
                   setTouched(false);
                   setResults([]);
                 }}
-                className="flex w-full items-center justify-between px-3 py-3 text-left hover:bg-accent"
+                className="flex w-full items-center justify-between px-3 py-3 text-left text-black hover:bg-accent"
               >
                 <span className="font-medium">{r.name}</span>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-black">
                   {r.teamAbbrev ?? ""} {r.positionCode ? `- ${r.positionCode}` : ""}
                 </span>
               </button>
