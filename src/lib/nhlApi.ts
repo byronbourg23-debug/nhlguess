@@ -288,7 +288,7 @@ function getPreviousTeams(
       ...(currentTeamAbbrev && TEAM_META[currentTeamAbbrev]
         ? TEAM_META[currentTeamAbbrev].names
         : []),
-    ].filter(Boolean),
+    ].filter((name): name is string => Boolean(name)),
   );
 
   const previousTeams = raw.seasonTotals

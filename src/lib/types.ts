@@ -1,27 +1,30 @@
-export type DeductionQuestionType =
-  | "position"
-  | "team"
-  | "conference"
-  | "division"
-  | "hand"
-  | "top6"
-  | "top4"
-  | "country"
-  | "age"
-  | "jerseyNumber"
-  | "other";
+export type ChecklistMark = "neutral" | "yes" | "no";
 
-export interface DeductionRow {
+export interface ChecklistItemState {
   id: string;
-  questionType: DeductionQuestionType;
-  customQuestionText?: string;
-  answer: string;
+  label: string;
+  mark: ChecklistMark;
 }
+
+export interface OpponentChecklist {
+  position: Record<string, ChecklistMark>;
+  team: Record<string, ChecklistMark>;
+  conference: Record<string, ChecklistMark>;
+  division: Record<string, ChecklistMark>;
+  hand: Record<string, ChecklistMark>;
+  role: Record<string, ChecklistMark>;
+  nationality: Record<string, ChecklistMark>;
+  age: Record<string, ChecklistMark>;
+  jerseyNumber: Record<string, ChecklistMark>;
+  other: ChecklistItemState[];
+}
+
+export type ChecklistRecordCategory = Exclude<keyof OpponentChecklist, "other">;
 
 export interface Opponent {
   id: string;
   name: string;
-  rows: DeductionRow[];
+  checklist: OpponentChecklist;
 }
 
 export interface SavedSession {

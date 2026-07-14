@@ -1,27 +1,21 @@
 import { useEffect, useState } from "react";
+import { createEmptyChecklist } from "../lib/checklist";
 import type { Opponent, SavedSession } from "../lib/types";
 import {
   deleteSavedSession,
   loadOpponents,
   loadSavedSessions,
-  makeEmptyDeductionRow,
   makeId,
   saveGameSession,
   saveOpponents,
 } from "../lib/storage";
 import { OpponentSetup } from "./OpponentSetup";
 import { OpponentDeductionCard } from "./OpponentDeductionCard";
+import { SavedSessionsPanel } from "./SavedSessionsPanel";
 
-const fieldClass =
-  "w-full min-w-0 rounded-md border border-border bg-background px-3 py-2.5 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring";
+type TrackerView = "opponents" | "save" | null;
 
-const saveButtonClass =
-  "inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-emerald-700";
-
-const dangerButtonClass =
-  "inline-flex items-center justify-center rounded-md border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-700 shadow-sm transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50";
-
-export function DeductionTracker() {
+export function DeductionTracker({ view }: { view: TrackerView }) {
   const [opponents, setOpponents] = useState<Opponent[]>([]);
   const [savedSessions, setSavedSessions] = useState<SavedSession[]>([]);
   const [sessionName, setSessionName] = useState("");
@@ -41,21 +35,24 @@ export function DeductionTracker() {
   }, [isLoaded, opponents]);
 
   function addOpponent(name: string) {
-    setOpponents((prev) => [...prev, { id: makeId(), name, rows: [makeEmptyDeductionRow()] }]);
+    setOpponents((current) => [
+      ...current,
+      { id: makeId(), name, checklist: createEmptyChecklist() },
+    ]);
   }
-  function updateOpponent(o: Opponent) {
-    setOpponents((prev) => prev.map((p) => (p.id === o.id ? o : p)));
+
+  function updateOpponent(nextOpponent: Opponent) {
+    setOpponents((current) =>
+      current.map((opponent) => (opponent.id === nextOpponent.id ? nextOpponent : opponent)),
+    );
   }
+
   function deleteOpponent(id: string) {
-    setOpponents((prev) => prev.filter((p) => p.id !== id));
-  }
-  function reset() {
-    setOpponents([]);
+    setOpponents((current) => current.filter((opponent) => opponent.id !== id));
   }
 
   function refreshSavedSessions(nextSelectedId?: string) {
-    const sessions = loadSavedSessions();
-    setSavedSessions(sessions);
+    setSavedSessions(loadSavedSessions());
     if (nextSelectedId !== undefined) setSelectedSessionId(nextSelectedId);
   }
 
@@ -76,9 +73,8 @@ export function DeductionTracker() {
     setSessionMessage(`Saved ${saved.name}.`);
   }
 
-  function loadSession(sessionId: string) {
-    setSelectedSessionId(sessionId);
-    const session = savedSessions.find((item) => item.id === sessionId);
+  function loadSession() {
+    const session = savedSessions.find((item) => item.id === selectedSessionId);
     if (!session) return;
 
     setOpponents(session.opponents);
@@ -98,84 +94,54 @@ export function DeductionTracker() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-base font-semibold tracking-tight">Game Session</h2>
-          <p className="text-sm text-muted-foreground">
-            Save this tracker locally, then load it again later.
-          </p>
-        </div>
-
-        <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-          <label className="sr-only" htmlFor="session-name">
-            Session name
-          </label>
-          <input
-            id="session-name"
-            value={sessionName}
-            onChange={(e) => {
-              setSessionName(e.target.value);
-              setSessionMessage("");
-            }}
-            placeholder="Session name"
-            className={fieldClass}
-          />
-          <button type="button" onClick={saveSession} className={saveButtonClass}>
-            Save Session
-          </button>
-        </div>
-
-        <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-          <label className="sr-only" htmlFor="saved-session">
-            Load saved session
-          </label>
-          <select
-            id="saved-session"
-            value={selectedSessionId}
-            onChange={(e) => loadSession(e.target.value)}
-            className={fieldClass}
-            disabled={savedSessions.length === 0}
-          >
-            <option value="">
-              {savedSessions.length === 0 ? "No saved sessions yet." : "Load saved session"}
-            </option>
-            {savedSessions.map((session) => (
-              <option key={session.id} value={session.id}>
-                {session.name}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={deleteSession}
-            className={dangerButtonClass}
-            disabled={!selectedSessionId}
-          >
-            Delete Saved Session
-          </button>
-        </div>
-
-        {sessionMessage ? (
-          <p className="mt-2 text-sm text-muted-foreground">{sessionMessage}</p>
-        ) : null}
+    <>
+      <section
+        id="panel-opponents"
+        role="tabpanel"
+        aria-labelledby="tab-opponents"
+        hidden={view !== "opponents"}
+        className="flex flex-col gap-4"
+      >
+        <OpponentSetup
+          onAdd={addOpponent}
+          onReset={() => setOpponents([])}
+          hasAny={opponents.length > 0}
+        />
+        {opponents.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
+            Add an opponent to start marking the checklist.
+          </div>
+        ) : (
+          opponents.map((opponent) => (
+            <OpponentDeductionCard
+              key={opponent.id}
+              opponent={opponent}
+              onUpdate={updateOpponent}
+              onDelete={deleteOpponent}
+            />
+          ))
+        )}
       </section>
 
-      <OpponentSetup onAdd={addOpponent} onReset={reset} hasAny={opponents.length > 0} />
-      {opponents.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
-          Add opponents to start tracking deduction rows.
-        </div>
-      ) : (
-        opponents.map((o) => (
-          <OpponentDeductionCard
-            key={o.id}
-            opponent={o}
-            onUpdate={updateOpponent}
-            onDelete={deleteOpponent}
-          />
-        ))
-      )}
-    </div>
+      <section id="panel-save" role="tabpanel" aria-labelledby="tab-save" hidden={view !== "save"}>
+        <SavedSessionsPanel
+          sessionName={sessionName}
+          selectedSessionId={selectedSessionId}
+          savedSessions={savedSessions}
+          message={sessionMessage}
+          onSessionNameChange={(name) => {
+            setSessionName(name);
+            setSessionMessage("");
+          }}
+          onSelectedSessionChange={(id) => {
+            setSelectedSessionId(id);
+            setSessionMessage("");
+          }}
+          onSave={saveSession}
+          onLoad={loadSession}
+          onDelete={deleteSession}
+        />
+      </section>
+    </>
   );
 }

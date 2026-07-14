@@ -1,3 +1,4 @@
+import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 interface Props {
@@ -9,11 +10,11 @@ interface Props {
 export function OpponentSetup({ onAdd, onReset, hasAny }: Props) {
   const [name, setName] = useState("");
 
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    const t = name.trim();
-    if (!t) return;
-    onAdd(t);
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
+    onAdd(trimmedName);
     setName("");
   }
 
@@ -21,30 +22,42 @@ export function OpponentSetup({ onAdd, onReset, hasAny }: Props) {
     <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
       <h2 className="text-base font-semibold tracking-tight">Opponents</h2>
       <form onSubmit={submit} className="mt-3 flex flex-col gap-2 sm:flex-row">
+        <label className="sr-only" htmlFor="opponent-name">
+          Opponent name
+        </label>
         <input
+          id="opponent-name"
           value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Add opponent name"
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Opponent name"
           className="min-w-0 flex-1 rounded-md border border-border bg-background px-3 py-2.5 text-sm shadow-sm outline-none focus:ring-2 focus:ring-ring"
         />
         <button
           type="submit"
-          className="inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition-colors hover:bg-emerald-700"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-bold uppercase text-white shadow-sm transition-colors hover:bg-emerald-700"
         >
+          <Plus className="h-4 w-4" aria-hidden="true" />
           ADD
         </button>
       </form>
-      {hasAny && (
+      {hasAny ? (
         <button
           type="button"
           onClick={() => {
-            if (confirm("Reset tracker? This deletes all opponents and rows.")) onReset();
+            if (
+              confirm(
+                "Clear all active opponents and checklist marks? Saved sessions will not be deleted.",
+              )
+            ) {
+              onReset();
+            }
           }}
-          className="mt-3 w-full rounded-md border border-red-300 bg-red-50 px-3 py-2.5 text-sm font-bold text-red-700 shadow-sm transition-colors hover:bg-red-100"
+          className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-red-300 bg-red-50 px-3 py-2.5 text-sm font-bold text-red-700 shadow-sm transition-colors hover:bg-red-100"
         >
+          <Trash2 className="h-4 w-4" aria-hidden="true" />
           Clear ALL
         </button>
-      )}
+      ) : null}
     </div>
   );
 }
