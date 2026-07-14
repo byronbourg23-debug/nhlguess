@@ -1,4 +1,4 @@
-import type { ChecklistMark, OpponentChecklist } from "./types";
+import type { ChecklistMark, ExplicitChecklistState } from "./types";
 
 export type ChecklistOption = {
   value: string;
@@ -6,9 +6,13 @@ export type ChecklistOption = {
 };
 
 export type TeamGroup = {
-  label: string;
+  label: DivisionValue;
+  conference: ConferenceValue;
   teams: readonly ChecklistOption[];
 };
+
+export type ConferenceValue = "East" | "West";
+export type DivisionValue = "Atlantic" | "Metropolitan" | "Central" | "Pacific";
 
 export const POSITION_OPTIONS = [
   { value: "LW", label: "LW" },
@@ -24,6 +28,7 @@ export const POSITION_OPTIONS = [
 export const TEAM_GROUPS: readonly TeamGroup[] = [
   {
     label: "Atlantic",
+    conference: "East",
     teams: [
       { value: "Bruins", label: "Bruins" },
       { value: "Sabres", label: "Sabres" },
@@ -37,6 +42,7 @@ export const TEAM_GROUPS: readonly TeamGroup[] = [
   },
   {
     label: "Metropolitan",
+    conference: "East",
     teams: [
       { value: "Hurricanes", label: "Hurricanes" },
       { value: "Blue Jackets", label: "Blue Jackets" },
@@ -50,6 +56,7 @@ export const TEAM_GROUPS: readonly TeamGroup[] = [
   },
   {
     label: "Central",
+    conference: "West",
     teams: [
       { value: "Blackhawks", label: "Blackhawks" },
       { value: "Avalanche", label: "Avalanche" },
@@ -63,6 +70,7 @@ export const TEAM_GROUPS: readonly TeamGroup[] = [
   },
   {
     label: "Pacific",
+    conference: "West",
     teams: [
       { value: "Ducks", label: "Ducks" },
       { value: "Flames", label: "Flames" },
@@ -77,6 +85,16 @@ export const TEAM_GROUPS: readonly TeamGroup[] = [
 ] as const;
 
 export const TEAM_OPTIONS = TEAM_GROUPS.flatMap((group) => group.teams);
+
+export const DIVISION_TO_CONFERENCE: Readonly<Record<DivisionValue, ConferenceValue>> =
+  Object.fromEntries(TEAM_GROUPS.map((group) => [group.label, group.conference])) as Record<
+    DivisionValue,
+    ConferenceValue
+  >;
+
+export const TEAM_TO_DIVISION: Readonly<Record<string, DivisionValue>> = Object.fromEntries(
+  TEAM_GROUPS.flatMap((group) => group.teams.map((team) => [team.value, group.label])),
+) as Record<string, DivisionValue>;
 
 export const CONFERENCE_OPTIONS = [
   { value: "East", label: "East" },
@@ -134,7 +152,7 @@ export const JERSEY_NUMBER_OPTIONS = [
   { value: "90-99", label: "90-99" },
 ] as const;
 
-export function createEmptyChecklist(): OpponentChecklist {
+export function createEmptyChecklist(): ExplicitChecklistState {
   return {
     position: createNeutralRecord(POSITION_OPTIONS),
     team: createNeutralRecord(TEAM_OPTIONS),

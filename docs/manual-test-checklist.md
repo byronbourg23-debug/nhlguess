@@ -23,12 +23,22 @@
 - Expand Team and confirm all 32 teams are grouped under Atlantic, Metropolitan, Central, and Pacific.
 - Confirm there is no old per-opponent row ADD button.
 - Mark John's `C` as Yes and Sam's `C` as No; confirm each card keeps its own state.
+- Confirm John's `F` becomes an automatic Yes and incompatible position options become automatic No marks.
 - Click John's selected Yes control again and confirm it returns to neutral.
+- Confirm the automatic position marks also return to neutral and do not remain stale.
 - Confirm Yes and No cannot be selected together for one option.
+- Mark `West` as Yes and confirm East, Atlantic, Metropolitan, and all Eastern teams become automatic No marks.
+- Return `West` to neutral and confirm all marks derived only from West return to neutral.
+- Mark `Pacific` as Yes and confirm West becomes automatic Yes, other divisions become automatic No, and non-Pacific teams become automatic No.
+- Mark `Oilers` as Yes and confirm Pacific and West become automatic Yes and every other team becomes automatic No.
+- Mark `Kings` as Yes and confirm the explicit Oilers Yes is replaced, Kings is Yes, and Oilers becomes automatic No.
+- Return Kings to neutral and confirm the team, division, and conference automatic marks clear.
+- Confirm automatic marks use lighter styling and show an `Auto` label while manual marks remain solid.
 - Confirm Top 6 and Top 4 are separate items in Line / Role.
 - Add a custom nationality and confirm it supports neutral, Yes, and No and can be deleted.
 - Add an Other item, mark it, and confirm it can be deleted.
 - Refresh and confirm opponent names, checklist marks, and custom items persist.
+- Confirm automatic marks are restored by recalculation after refresh.
 - Confirm `Remove` requires confirmation and only removes that opponent.
 - Click `Clear ALL`, cancel the confirmation, and confirm active data remains.
 - Click `Clear ALL` again and confirm; verify active opponents are cleared.
@@ -41,6 +51,7 @@
 - Click `Clear ALL` and confirm only the active tracker clears.
 - Return to Save, select `Test Game`, and click `Load Session`.
 - Confirm John, all checklist marks, and the custom item return.
+- Confirm manual marks load from the session and their automatic marks are recalculated.
 - Refresh and confirm the saved session still exists.
 - Delete `Test Game` and confirm a popup appears before deletion.
 - Confirm the deleted session is removed from the dropdown.
@@ -57,5 +68,6 @@
 ## localStorage Persistence
 
 - Refresh after editing checklist marks and confirm active tracker data remains.
+- Change or clear a source mark after refresh and confirm old automatic exclusions disappear.
 - Refresh after saving a session and confirm saved sessions remain.
 - Confirm `Clear ALL` does not delete saved sessions.

@@ -1,5 +1,5 @@
 import { Check, Plus, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AGE_OPTIONS,
   CONFERENCE_OPTIONS,
@@ -12,13 +12,19 @@ import {
   TEAM_GROUPS,
   type ChecklistOption,
 } from "../lib/checklist";
+import {
+  deriveChecklistState,
+  getEffectiveChecklistState,
+  resolveChecklistMark,
+  updateExplicitChecklistMark,
+} from "../lib/checklistLogic";
 import { makeId } from "../lib/storage";
 import type {
   ChecklistItemState,
   ChecklistMark,
+  ChecklistMarkSource,
   ChecklistRecordCategory,
   Opponent,
-  OpponentChecklist,
 } from "../lib/types";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 
@@ -35,19 +41,29 @@ const STATIC_NATIONALITIES: Set<string> = new Set(
 export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
   const [customNationality, setCustomNationality] = useState("");
   const [customItem, setCustomItem] = useState("");
+  const explicitChecklist = opponent.explicitChecklist;
+  const { derivedChecklist, effectiveChecklist } = useMemo(() => {
+    const derived = deriveChecklistState(explicitChecklist);
+    return {
+      derivedChecklist: derived,
+      effectiveChecklist: getEffectiveChecklistState(explicitChecklist, derived),
+    };
+  }, [explicitChecklist]);
 
   function setRecordMark(
     category: ChecklistRecordCategory,
     value: string,
     selectedMark: Exclude<ChecklistMark, "neutral">,
   ) {
-    const record = opponent.checklist[category];
-    const nextMark = record[value] === selectedMark ? "neutral" : selectedMark;
-    const checklist = {
-      ...opponent.checklist,
-      [category]: { ...record, [value]: nextMark },
-    } as OpponentChecklist;
-    onUpdate({ ...opponent, checklist });
+    onUpdate({
+      ...opponent,
+      explicitChecklist: updateExplicitChecklistMark(
+        explicitChecklist,
+        category,
+        value,
+        selectedMark,
+      ),
+    });
   }
 
   function addNationality(event: React.FormEvent) {
@@ -55,15 +71,15 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
     const label = customNationality.trim();
     if (!label) return;
 
-    const existing = Object.keys(opponent.checklist.nationality).find(
+    const existing = Object.keys(explicitChecklist.nationality).find(
       (item) => item.toLowerCase() === label.toLowerCase(),
     );
     if (!existing) {
       onUpdate({
         ...opponent,
-        checklist: {
-          ...opponent.checklist,
-          nationality: { ...opponent.checklist.nationality, [label]: "neutral" },
+        explicitChecklist: {
+          ...explicitChecklist,
+          nationality: { ...explicitChecklist.nationality, [label]: "neutral" },
         },
       });
     }
@@ -71,11 +87,11 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
   }
 
   function deleteNationality(label: string) {
-    const nextNationality = { ...opponent.checklist.nationality };
+    const nextNationality = { ...explicitChecklist.nationality };
     delete nextNationality[label];
     onUpdate({
       ...opponent,
-      checklist: { ...opponent.checklist, nationality: nextNationality },
+      explicitChecklist: { ...explicitChecklist, nationality: nextNationality },
     });
   }
 
@@ -85,9 +101,9 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
     if (!label) return;
     onUpdate({
       ...opponent,
-      checklist: {
-        ...opponent.checklist,
-        other: [...opponent.checklist.other, { id: makeId(), label, mark: "neutral" }],
+      explicitChecklist: {
+        ...explicitChecklist,
+        other: [...explicitChecklist.other, { id: makeId(), label, mark: "neutral" }],
       },
     });
     setCustomItem("");
@@ -96,9 +112,9 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
   function setOtherMark(id: string, selectedMark: Exclude<ChecklistMark, "neutral">) {
     onUpdate({
       ...opponent,
-      checklist: {
-        ...opponent.checklist,
-        other: opponent.checklist.other.map((item) =>
+      explicitChecklist: {
+        ...explicitChecklist,
+        other: explicitChecklist.other.map((item) =>
           item.id === id
             ? { ...item, mark: item.mark === selectedMark ? "neutral" : selectedMark }
             : item,
@@ -110,9 +126,9 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
   function deleteOtherItem(id: string) {
     onUpdate({
       ...opponent,
-      checklist: {
-        ...opponent.checklist,
-        other: opponent.checklist.other.filter((item) => item.id !== id),
+      explicitChecklist: {
+        ...explicitChecklist,
+        other: explicitChecklist.other.filter((item) => item.id !== id),
       },
     });
   }
@@ -139,16 +155,17 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
         <ChecklistSection
           value="position"
           title="Position"
-          marks={Object.values(opponent.checklist.position)}
+          marks={Object.values(effectiveChecklist.position)}
         >
           <ChecklistRows
             options={POSITION_OPTIONS}
-            marks={opponent.checklist.position}
+            explicitMarks={explicitChecklist.position}
+            derivedMarks={derivedChecklist.position}
             onMark={(value, mark) => setRecordMark("position", value, mark)}
           />
         </ChecklistSection>
 
-        <ChecklistSection value="team" title="Team" marks={Object.values(opponent.checklist.team)}>
+        <ChecklistSection value="team" title="Team" marks={Object.values(effectiveChecklist.team)}>
           <div className="space-y-5">
             {TEAM_GROUPS.map((group) => (
               <div key={group.label}>
@@ -157,7 +174,8 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
                 </h4>
                 <ChecklistRows
                   options={group.teams}
-                  marks={opponent.checklist.team}
+                  explicitMarks={explicitChecklist.team}
+                  derivedMarks={derivedChecklist.team}
                   onMark={(value, mark) => setRecordMark("team", value, mark)}
                 />
               </div>
@@ -168,11 +186,12 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
         <ChecklistSection
           value="conference"
           title="Conference"
-          marks={Object.values(opponent.checklist.conference)}
+          marks={Object.values(effectiveChecklist.conference)}
         >
           <ChecklistRows
             options={CONFERENCE_OPTIONS}
-            marks={opponent.checklist.conference}
+            explicitMarks={explicitChecklist.conference}
+            derivedMarks={derivedChecklist.conference}
             onMark={(value, mark) => setRecordMark("conference", value, mark)}
           />
         </ChecklistSection>
@@ -180,19 +199,21 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
         <ChecklistSection
           value="division"
           title="Division"
-          marks={Object.values(opponent.checklist.division)}
+          marks={Object.values(effectiveChecklist.division)}
         >
           <ChecklistRows
             options={DIVISION_OPTIONS}
-            marks={opponent.checklist.division}
+            explicitMarks={explicitChecklist.division}
+            derivedMarks={derivedChecklist.division}
             onMark={(value, mark) => setRecordMark("division", value, mark)}
           />
         </ChecklistSection>
 
-        <ChecklistSection value="hand" title="Hand" marks={Object.values(opponent.checklist.hand)}>
+        <ChecklistSection value="hand" title="Hand" marks={Object.values(effectiveChecklist.hand)}>
           <ChecklistRows
             options={HAND_OPTIONS}
-            marks={opponent.checklist.hand}
+            explicitMarks={explicitChecklist.hand}
+            derivedMarks={derivedChecklist.hand}
             onMark={(value, mark) => setRecordMark("hand", value, mark)}
           />
         </ChecklistSection>
@@ -200,11 +221,12 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
         <ChecklistSection
           value="role"
           title="Line / Role"
-          marks={Object.values(opponent.checklist.role)}
+          marks={Object.values(effectiveChecklist.role)}
         >
           <ChecklistRows
             options={ROLE_OPTIONS}
-            marks={opponent.checklist.role}
+            explicitMarks={explicitChecklist.role}
+            derivedMarks={derivedChecklist.role}
             onMark={(value, mark) => setRecordMark("role", value, mark)}
           />
         </ChecklistSection>
@@ -212,24 +234,32 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
         <ChecklistSection
           value="nationality"
           title="Country / Nationality"
-          marks={Object.values(opponent.checklist.nationality)}
+          marks={Object.values(effectiveChecklist.nationality)}
         >
           <ChecklistRows
             options={NATIONALITY_OPTIONS}
-            marks={opponent.checklist.nationality}
+            explicitMarks={explicitChecklist.nationality}
+            derivedMarks={derivedChecklist.nationality}
             onMark={(value, mark) => setRecordMark("nationality", value, mark)}
           />
-          {Object.entries(opponent.checklist.nationality)
+          {Object.entries(explicitChecklist.nationality)
             .filter(([label]) => !STATIC_NATIONALITIES.has(label))
-            .map(([label, mark]) => (
-              <ChecklistRow
-                key={label}
-                label={label}
-                mark={mark}
-                onMark={(nextMark) => setRecordMark("nationality", label, nextMark)}
-                onDelete={() => deleteNationality(label)}
-              />
-            ))}
+            .map(([label, explicitMark]) => {
+              const resolved = resolveChecklistMark(
+                explicitMark,
+                derivedChecklist.nationality[label],
+              );
+              return (
+                <ChecklistRow
+                  key={label}
+                  label={label}
+                  mark={resolved.mark}
+                  source={resolved.source}
+                  onMark={(nextMark) => setRecordMark("nationality", label, nextMark)}
+                  onDelete={() => deleteNationality(label)}
+                />
+              );
+            })}
           <AddItemForm
             value={customNationality}
             onChange={setCustomNationality}
@@ -239,10 +269,11 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
           />
         </ChecklistSection>
 
-        <ChecklistSection value="age" title="Age" marks={Object.values(opponent.checklist.age)}>
+        <ChecklistSection value="age" title="Age" marks={Object.values(effectiveChecklist.age)}>
           <ChecklistRows
             options={AGE_OPTIONS}
-            marks={opponent.checklist.age}
+            explicitMarks={explicitChecklist.age}
+            derivedMarks={derivedChecklist.age}
             onMark={(value, mark) => setRecordMark("age", value, mark)}
           />
         </ChecklistSection>
@@ -250,11 +281,12 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
         <ChecklistSection
           value="jersey-number"
           title="Jersey Number"
-          marks={Object.values(opponent.checklist.jerseyNumber)}
+          marks={Object.values(effectiveChecklist.jerseyNumber)}
         >
           <ChecklistRows
             options={JERSEY_NUMBER_OPTIONS}
-            marks={opponent.checklist.jerseyNumber}
+            explicitMarks={explicitChecklist.jerseyNumber}
+            derivedMarks={derivedChecklist.jerseyNumber}
             onMark={(value, mark) => setRecordMark("jerseyNumber", value, mark)}
           />
         </ChecklistSection>
@@ -262,9 +294,9 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
         <ChecklistSection
           value="other"
           title="Other"
-          marks={opponent.checklist.other.map((item) => item.mark)}
+          marks={explicitChecklist.other.map((item) => item.mark)}
         >
-          {opponent.checklist.other.map((item) => (
+          {explicitChecklist.other.map((item) => (
             <CustomChecklistRow
               key={item.id}
               item={item}
@@ -320,23 +352,32 @@ function ChecklistSection({
 
 function ChecklistRows({
   options,
-  marks,
+  explicitMarks,
+  derivedMarks,
   onMark,
 }: {
   options: readonly ChecklistOption[];
-  marks: Record<string, ChecklistMark>;
+  explicitMarks: Record<string, ChecklistMark>;
+  derivedMarks: Record<string, ChecklistMark>;
   onMark: (value: string, mark: Exclude<ChecklistMark, "neutral">) => void;
 }) {
   return (
     <div className="divide-y divide-border">
-      {options.map((option) => (
-        <ChecklistRow
-          key={option.value}
-          label={option.label}
-          mark={marks[option.value] ?? "neutral"}
-          onMark={(mark) => onMark(option.value, mark)}
-        />
-      ))}
+      {options.map((option) => {
+        const resolved = resolveChecklistMark(
+          explicitMarks[option.value],
+          derivedMarks[option.value],
+        );
+        return (
+          <ChecklistRow
+            key={option.value}
+            label={option.label}
+            mark={resolved.mark}
+            source={resolved.source}
+            onMark={(mark) => onMark(option.value, mark)}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -350,31 +391,55 @@ function CustomChecklistRow({
   onMark: (mark: Exclude<ChecklistMark, "neutral">) => void;
   onDelete: () => void;
 }) {
-  return <ChecklistRow label={item.label} mark={item.mark} onMark={onMark} onDelete={onDelete} />;
+  return (
+    <ChecklistRow
+      label={item.label}
+      mark={item.mark}
+      source={item.mark === "neutral" ? "neutral" : "explicit"}
+      onMark={onMark}
+      onDelete={onDelete}
+    />
+  );
 }
 
 function ChecklistRow({
   label,
   mark,
+  source,
   onMark,
   onDelete,
 }: {
   label: string;
   mark: ChecklistMark;
+  source: ChecklistMarkSource;
   onMark: (mark: Exclude<ChecklistMark, "neutral">) => void;
   onDelete?: () => void;
 }) {
   return (
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 py-2">
-      <span className="min-w-0 break-words pr-1 text-sm font-medium">{label}</span>
+      <span className="flex min-w-0 flex-wrap items-center gap-1.5 break-words pr-1 text-sm font-medium">
+        <span>{label}</span>
+        {source === "derived" ? (
+          <span className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
+            Auto
+          </span>
+        ) : null}
+      </span>
       <div className="flex shrink-0 items-center gap-1">
         <MarkButton
           label={label}
           kind="yes"
           selected={mark === "yes"}
+          source={source}
           onClick={() => onMark("yes")}
         />
-        <MarkButton label={label} kind="no" selected={mark === "no"} onClick={() => onMark("no")} />
+        <MarkButton
+          label={label}
+          kind="no"
+          selected={mark === "no"}
+          source={source}
+          onClick={() => onMark("no")}
+        />
         {onDelete ? (
           <button
             type="button"
@@ -395,19 +460,29 @@ function MarkButton({
   label,
   kind,
   selected,
+  source,
   onClick,
 }: {
   label: string;
   kind: "yes" | "no";
   selected: boolean;
+  source: ChecklistMarkSource;
   onClick: () => void;
 }) {
   const isYes = kind === "yes";
   const stateClass = selected
-    ? isYes
-      ? "border-emerald-700 bg-emerald-600 text-white"
-      : "border-red-700 bg-red-600 text-white"
+    ? source === "derived"
+      ? isYes
+        ? "border-emerald-400 bg-emerald-50 text-emerald-800"
+        : "border-red-400 bg-red-50 text-red-800"
+      : isYes
+        ? "border-emerald-700 bg-emerald-600 text-white"
+        : "border-red-700 bg-red-600 text-white"
     : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground";
+  const title =
+    selected && source === "derived"
+      ? `${label} was automatically marked as ${kind}`
+      : `Mark ${label} as ${kind}`;
 
   return (
     <button
@@ -415,7 +490,7 @@ function MarkButton({
       onClick={onClick}
       aria-pressed={selected}
       aria-label={`Mark ${label} as ${kind}`}
-      title={`Mark ${label} as ${kind}`}
+      title={title}
       className={`inline-flex h-11 min-w-14 items-center justify-center gap-1 rounded-md border px-2 text-xs font-bold transition-colors ${stateClass}`}
     >
       {isYes ? (

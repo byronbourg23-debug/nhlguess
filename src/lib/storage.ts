@@ -15,8 +15,8 @@ import {
 import type {
   ChecklistItemState,
   ChecklistMark,
+  ExplicitChecklistState,
   Opponent,
-  OpponentChecklist,
   SavedSession,
 } from "./types";
 
@@ -185,6 +185,7 @@ function normalizeOpponent(value: unknown): Opponent | null {
   const raw = value as {
     id?: unknown;
     name?: unknown;
+    explicitChecklist?: unknown;
     checklist?: unknown;
     rows?: unknown;
   };
@@ -193,15 +194,19 @@ function normalizeOpponent(value: unknown): Opponent | null {
   return {
     id: typeof raw.id === "string" && raw.id ? raw.id : makeId(),
     name,
-    checklist: raw.checklist ? normalizeChecklist(raw.checklist) : migrateLegacyRows(raw.rows),
+    explicitChecklist: raw.explicitChecklist
+      ? normalizeChecklist(raw.explicitChecklist)
+      : raw.checklist
+        ? normalizeChecklist(raw.checklist)
+        : migrateLegacyRows(raw.rows),
   };
 }
 
-function normalizeChecklist(value: unknown): OpponentChecklist {
+function normalizeChecklist(value: unknown): ExplicitChecklistState {
   const empty = createEmptyChecklist();
   if (!value || typeof value !== "object") return empty;
 
-  const raw = value as Partial<Record<keyof OpponentChecklist, unknown>>;
+  const raw = value as Partial<Record<keyof ExplicitChecklistState, unknown>>;
   return {
     position: normalizeMarkRecord(raw.position, empty.position),
     team: normalizeMarkRecord(raw.team, empty.team),
@@ -250,7 +255,7 @@ function normalizeCustomItems(value: unknown): ChecklistItemState[] {
     .filter((item): item is ChecklistItemState => Boolean(item));
 }
 
-function migrateLegacyRows(value: unknown): OpponentChecklist {
+function migrateLegacyRows(value: unknown): ExplicitChecklistState {
   const checklist = createEmptyChecklist();
   if (!Array.isArray(value)) return checklist;
 

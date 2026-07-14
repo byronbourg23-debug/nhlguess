@@ -37,7 +37,7 @@ export function DeductionTracker({ view }: { view: TrackerView }) {
   function addOpponent(name: string) {
     setOpponents((current) => [
       ...current,
-      { id: makeId(), name, checklist: createEmptyChecklist() },
+      { id: makeId(), name, explicitChecklist: createEmptyChecklist() },
     ]);
   }
 

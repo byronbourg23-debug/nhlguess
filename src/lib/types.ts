@@ -6,7 +6,7 @@ export interface ChecklistItemState {
   mark: ChecklistMark;
 }
 
-export interface OpponentChecklist {
+export interface ChecklistState {
   position: Record<string, ChecklistMark>;
   team: Record<string, ChecklistMark>;
   conference: Record<string, ChecklistMark>;
@@ -19,12 +19,20 @@ export interface OpponentChecklist {
   other: ChecklistItemState[];
 }
 
-export type ChecklistRecordCategory = Exclude<keyof OpponentChecklist, "other">;
+export type ExplicitChecklistState = ChecklistState;
+export type DerivedChecklistState = ChecklistState;
+export type ChecklistRecordCategory = Exclude<keyof ChecklistState, "other">;
+export type ChecklistMarkSource = "neutral" | "explicit" | "derived";
+
+export interface ResolvedChecklistMark {
+  mark: ChecklistMark;
+  source: ChecklistMarkSource;
+}
 
 export interface Opponent {
   id: string;
   name: string;
-  checklist: OpponentChecklist;
+  explicitChecklist: ExplicitChecklistState;
 }
 
 export interface SavedSession {
