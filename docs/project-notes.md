@@ -24,6 +24,18 @@ Three tabs:
 2. Opponent(s)
 3. Save
 
+## Beta Onboarding
+
+- The app title includes a small `Beta` label.
+- First use shows a non-blocking quick-start panel and one-line hint for the active tab.
+- Dismissing onboarding stores `nhl-guess-helper:onboarding-dismissed:v1` in localStorage.
+- `How to Play` remains available after dismissal and explains the three tabs and checklist states.
+- Green means confirmed, red X means ruled out, and `Auto` means calculated from another confirmed answer.
+- The footer links to Privacy and the GitHub feedback form.
+- Privacy explains that opponent data and saved sessions stay in browser localStorage, require no
+  account, and are not intentionally uploaded to an application database.
+- Clearing browser data removes locally saved games.
+
 ## My Player
 
 Purpose:

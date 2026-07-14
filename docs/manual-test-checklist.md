@@ -6,6 +6,19 @@
 - Confirm each tab fits and remains tappable around 390px wide.
 - Switch between all three tabs and confirm no page reload occurs.
 
+## Beta Onboarding and Privacy
+
+- In a fresh browser profile, confirm a small `Beta` label appears beside the app title.
+- Confirm first use shows a dismissible quick-start panel without blocking the app.
+- Confirm the active-tab hints read `Search for your selected player.`, `Record clues for opponents.`, and `Save or restore the current game.`
+- Confirm the legend explains green confirmed, red X ruled out, and `Auto` calculated marks.
+- Confirm the quick start warns that saved games stay in the current browser/device and clearing browser data removes them.
+- Dismiss onboarding, refresh, and confirm the quick start and first-use hints do not return.
+- Open `How to Play` and confirm the same tab guidance, checklist legend, and storage warning remain available.
+- Open `Privacy` and confirm it explains localStorage, no account requirement, no intentional application-database upload, and browser-data clearing.
+- Confirm `Feedback` opens the repository's GitHub issue form in a new tab.
+- Confirm the footer keeps the browser/device storage note visible after onboarding is dismissed.
+
 ## My Player
 
 - Search for `Connor McDavid` and select him.
