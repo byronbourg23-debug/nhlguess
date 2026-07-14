@@ -10,6 +10,7 @@ import {
   POSITION_OPTIONS,
   ROLE_OPTIONS,
   TEAM_GROUPS,
+  TEAM_OPTIONS,
   type ChecklistOption,
 } from "../lib/checklist";
 import {
@@ -37,6 +38,7 @@ interface Props {
 const STATIC_NATIONALITIES: Set<string> = new Set(
   NATIONALITY_OPTIONS.map((option) => option.value),
 );
+const POSITION_SUMMARY_ORDER = ["F", "C", "LW", "RW", "D", "G", "LD", "RD"];
 
 export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
   const [customNationality, setCustomNationality] = useState("");
@@ -155,7 +157,11 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
         <ChecklistSection
           value="position"
           title="Position"
-          marks={Object.values(effectiveChecklist.position)}
+          summaryLabels={getSelectedOptionLabels(
+            POSITION_OPTIONS,
+            effectiveChecklist.position,
+            POSITION_SUMMARY_ORDER,
+          )}
         >
           <ChecklistRows
             options={POSITION_OPTIONS}
@@ -165,7 +171,11 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
           />
         </ChecklistSection>
 
-        <ChecklistSection value="team" title="Team" marks={Object.values(effectiveChecklist.team)}>
+        <ChecklistSection
+          value="team"
+          title="Team"
+          summaryLabels={getSelectedOptionLabels(TEAM_OPTIONS, effectiveChecklist.team)}
+        >
           <div className="space-y-5">
             {TEAM_GROUPS.map((group) => (
               <div key={group.label}>
@@ -186,7 +196,7 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
         <ChecklistSection
           value="conference"
           title="Conference"
-          marks={Object.values(effectiveChecklist.conference)}
+          summaryLabels={getSelectedOptionLabels(CONFERENCE_OPTIONS, effectiveChecklist.conference)}
         >
           <ChecklistRows
             options={CONFERENCE_OPTIONS}
@@ -199,7 +209,7 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
         <ChecklistSection
           value="division"
           title="Division"
-          marks={Object.values(effectiveChecklist.division)}
+          summaryLabels={getSelectedOptionLabels(DIVISION_OPTIONS, effectiveChecklist.division)}
         >
           <ChecklistRows
             options={DIVISION_OPTIONS}
@@ -209,7 +219,11 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
           />
         </ChecklistSection>
 
-        <ChecklistSection value="hand" title="Hand" marks={Object.values(effectiveChecklist.hand)}>
+        <ChecklistSection
+          value="hand"
+          title="Hand"
+          summaryLabels={getSelectedOptionLabels(HAND_OPTIONS, effectiveChecklist.hand)}
+        >
           <ChecklistRows
             options={HAND_OPTIONS}
             explicitMarks={explicitChecklist.hand}
@@ -221,7 +235,7 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
         <ChecklistSection
           value="role"
           title="Line / Role"
-          marks={Object.values(effectiveChecklist.role)}
+          summaryLabels={getSelectedOptionLabels(ROLE_OPTIONS, effectiveChecklist.role)}
         >
           <ChecklistRows
             options={ROLE_OPTIONS}
@@ -234,7 +248,7 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
         <ChecklistSection
           value="nationality"
           title="Country / Nationality"
-          marks={Object.values(effectiveChecklist.nationality)}
+          summaryLabels={getNationalitySummaryLabels(effectiveChecklist.nationality)}
         >
           <ChecklistRows
             options={NATIONALITY_OPTIONS}
@@ -269,7 +283,11 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
           />
         </ChecklistSection>
 
-        <ChecklistSection value="age" title="Age" marks={Object.values(effectiveChecklist.age)}>
+        <ChecklistSection
+          value="age"
+          title="Age"
+          summaryLabels={getSelectedOptionLabels(AGE_OPTIONS, effectiveChecklist.age)}
+        >
           <ChecklistRows
             options={AGE_OPTIONS}
             explicitMarks={explicitChecklist.age}
@@ -281,7 +299,10 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
         <ChecklistSection
           value="jersey-number"
           title="Jersey Number"
-          marks={Object.values(effectiveChecklist.jerseyNumber)}
+          summaryLabels={getSelectedOptionLabels(
+            JERSEY_NUMBER_OPTIONS,
+            effectiveChecklist.jerseyNumber,
+          )}
         >
           <ChecklistRows
             options={JERSEY_NUMBER_OPTIONS}
@@ -294,7 +315,9 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
         <ChecklistSection
           value="other"
           title="Other"
-          marks={explicitChecklist.other.map((item) => item.mark)}
+          summaryLabels={uniqueLabels(
+            explicitChecklist.other.filter((item) => item.mark === "yes").map((item) => item.label),
+          )}
         >
           {explicitChecklist.other.map((item) => (
             <CustomChecklistRow
@@ -320,27 +343,24 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
 function ChecklistSection({
   value,
   title,
-  marks,
+  summaryLabels,
   children,
 }: {
   value: string;
   title: string;
-  marks: ChecklistMark[];
+  summaryLabels: string[];
   children: React.ReactNode;
 }) {
-  const yesCount = marks.filter((mark) => mark === "yes").length;
-  const noCount = marks.filter((mark) => mark === "no").length;
+  const summary = uniqueLabels(summaryLabels).join(", ");
 
   return (
     <AccordionItem value={value}>
-      <AccordionTrigger className="gap-3 py-3.5 hover:no-underline">
-        <span className="flex min-w-0 flex-1 items-center justify-between gap-2 pr-1">
+      <AccordionTrigger className="group gap-3 py-3.5 hover:no-underline">
+        <span className="grid min-w-0 flex-1 gap-0.5 pr-1 text-left">
           <span className="font-semibold">{title}</span>
-          {yesCount || noCount ? (
-            <span className="shrink-0 text-xs font-normal text-muted-foreground">
-              {yesCount ? `${yesCount} yes` : ""}
-              {yesCount && noCount ? " / " : ""}
-              {noCount ? `${noCount} no` : ""}
+          {summary ? (
+            <span className="min-w-0 whitespace-normal break-words text-xs font-medium text-emerald-700 group-data-[state=open]:hidden">
+              {summary}
             </span>
           ) : null}
         </span>
@@ -348,6 +368,40 @@ function ChecklistSection({
       <AccordionContent className="pb-3">{children}</AccordionContent>
     </AccordionItem>
   );
+}
+
+function getSelectedOptionLabels(
+  options: readonly ChecklistOption[],
+  marks: Record<string, ChecklistMark>,
+  order = options.map((option) => option.value),
+): string[] {
+  const optionsByValue = new Map(options.map((option) => [option.value, option.label]));
+  return uniqueLabels(
+    order
+      .filter((value) => marks[value] === "yes")
+      .map((value) => optionsByValue.get(value))
+      .filter((label): label is string => Boolean(label)),
+  );
+}
+
+function getNationalitySummaryLabels(marks: Record<string, ChecklistMark>): string[] {
+  const standardLabels = getSelectedOptionLabels(NATIONALITY_OPTIONS, marks);
+  const customLabels = Object.entries(marks)
+    .filter(([value, mark]) => !STATIC_NATIONALITIES.has(value) && mark === "yes")
+    .map(([value]) => value);
+  return uniqueLabels([...standardLabels, ...customLabels]);
+}
+
+function uniqueLabels(labels: string[]): string[] {
+  const seen = new Set<string>();
+  return labels
+    .map((label) => label.trim())
+    .filter((label) => {
+      const key = label.toLocaleLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
 function ChecklistRows({
