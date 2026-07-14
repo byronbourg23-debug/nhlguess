@@ -1,16 +1,14 @@
-import { Check, Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronsDownUp, ChevronsUpDown, Plus, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
-  AGE_OPTIONS,
   CONFERENCE_OPTIONS,
   DIVISION_OPTIONS,
   HAND_OPTIONS,
-  JERSEY_NUMBER_OPTIONS,
   NATIONALITY_OPTIONS,
   POSITION_OPTIONS,
-  ROLE_OPTIONS,
   TEAM_GROUPS,
   TEAM_OPTIONS,
+  TEAM_TO_DIVISION,
   type ChecklistOption,
 } from "../lib/checklist";
 import {
@@ -28,6 +26,7 @@ import type {
   Opponent,
 } from "../lib/types";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
+import { Checkbox } from "./ui/checkbox";
 
 interface Props {
   opponent: Opponent;
@@ -38,11 +37,36 @@ interface Props {
 const STATIC_NATIONALITIES: Set<string> = new Set(
   NATIONALITY_OPTIONS.map((option) => option.value),
 );
-const POSITION_SUMMARY_ORDER = ["F", "C", "LW", "RW", "D", "G", "LD", "RD"];
+const TOP_LEVEL_CATEGORIES = [
+  "position",
+  "conference",
+  "division",
+  "team",
+  "hand",
+  "nationality",
+  "age",
+  "jersey-number",
+  "other",
+];
+const PRIMARY_POSITION_OPTIONS: readonly ChecklistOption[] = [
+  { value: "F", label: "Forward" },
+  { value: "D", label: "D" },
+  { value: "G", label: "Goalie" },
+];
+const FORWARD_POSITION_OPTIONS = POSITION_OPTIONS.filter((option) =>
+  ["LW", "C", "RW"].includes(option.value),
+);
+const DEFENSE_POSITION_OPTIONS = POSITION_OPTIONS.filter((option) =>
+  ["LD", "RD"].includes(option.value),
+);
+const POSITION_SUMMARY_ORDER = ["F", "LW", "C", "RW", "D", "LD", "RD", "G"];
 
 export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
   const [customNationality, setCustomNationality] = useState("");
   const [customItem, setCustomItem] = useState("");
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  const [expandedTeamDivisions, setExpandedTeamDivisions] = useState<string[]>([]);
+  const [showRuledOutTeams, setShowRuledOutTeams] = useState(false);
   const explicitChecklist = opponent.explicitChecklist;
   const { derivedChecklist, effectiveChecklist } = useMemo(() => {
     const derived = deriveChecklistState(explicitChecklist);
@@ -51,21 +75,70 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
       effectiveChecklist: getEffectiveChecklistState(explicitChecklist, derived),
     };
   }, [explicitChecklist]);
+  const selectedTeam = TEAM_OPTIONS.find(
+    (option) => effectiveChecklist.team[option.value] === "yes",
+  );
+  const selectedTeamDivision = selectedTeam ? TEAM_TO_DIVISION[selectedTeam.value] : undefined;
 
   function setRecordMark(
     category: ChecklistRecordCategory,
     value: string,
     selectedMark: Exclude<ChecklistMark, "neutral">,
   ) {
-    onUpdate({
-      ...opponent,
-      explicitChecklist: updateExplicitChecklistMark(
-        explicitChecklist,
-        category,
-        value,
-        selectedMark,
-      ),
-    });
+    const nextChecklist = updateExplicitChecklistMark(
+      explicitChecklist,
+      category,
+      value,
+      selectedMark,
+    );
+
+    if (
+      category === "team" &&
+      nextChecklist.team[value] === "yes" &&
+      expandedCategories.includes("team")
+    ) {
+      const division = TEAM_TO_DIVISION[value];
+      if (division) {
+        setExpandedTeamDivisions((current) =>
+          current.includes(division) ? current : [...current, division],
+        );
+      }
+    }
+
+    onUpdate({ ...opponent, explicitChecklist: nextChecklist });
+  }
+
+  function setClueText(field: "ageText" | "jerseyNumberText", value: string) {
+    onUpdate({ ...opponent, [field]: value });
+  }
+
+  function trimClueText(field: "ageText" | "jerseyNumberText") {
+    const trimmed = opponent[field].trim();
+    if (trimmed !== opponent[field]) setClueText(field, trimmed);
+  }
+
+  function handleCategoryChange(nextCategories: string[]) {
+    const teamWasClosed = !expandedCategories.includes("team");
+    setExpandedCategories(nextCategories);
+    if (teamWasClosed && nextCategories.includes("team") && selectedTeamDivision) {
+      setExpandedTeamDivisions((current) =>
+        current.includes(selectedTeamDivision) ? current : [...current, selectedTeamDivision],
+      );
+    }
+  }
+
+  function expandAll() {
+    setExpandedCategories([...TOP_LEVEL_CATEGORIES]);
+    if (selectedTeamDivision) {
+      setExpandedTeamDivisions((current) =>
+        current.includes(selectedTeamDivision) ? current : [...current, selectedTeamDivision],
+      );
+    }
+  }
+
+  function collapseAll() {
+    setExpandedCategories([]);
+    setExpandedTeamDivisions([]);
   }
 
   function addNationality(event: React.FormEvent) {
@@ -153,7 +226,35 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
         </button>
       </div>
 
-      <Accordion type="multiple" className="mt-3 border-t border-border">
+      <div
+        className="mt-3 flex flex-wrap gap-2"
+        role="group"
+        aria-label={`${opponent.name} checklist display controls`}
+      >
+        <button
+          type="button"
+          onClick={expandAll}
+          className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+        >
+          <ChevronsUpDown className="h-4 w-4" aria-hidden="true" />
+          Expand All
+        </button>
+        <button
+          type="button"
+          onClick={collapseAll}
+          className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+        >
+          <ChevronsDownUp className="h-4 w-4" aria-hidden="true" />
+          Collapse All
+        </button>
+      </div>
+
+      <Accordion
+        type="multiple"
+        value={expandedCategories}
+        onValueChange={handleCategoryChange}
+        className="mt-3 border-t border-border"
+      >
         <ChecklistSection
           value="position"
           title="Position"
@@ -164,33 +265,31 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
           )}
         >
           <ChecklistRows
-            options={POSITION_OPTIONS}
+            options={PRIMARY_POSITION_OPTIONS}
             explicitMarks={explicitChecklist.position}
             derivedMarks={derivedChecklist.position}
             onMark={(value, mark) => setRecordMark("position", value, mark)}
           />
-        </ChecklistSection>
-
-        <ChecklistSection
-          value="team"
-          title="Team"
-          summaryLabels={getSelectedOptionLabels(TEAM_OPTIONS, effectiveChecklist.team)}
-        >
-          <div className="space-y-5">
-            {TEAM_GROUPS.map((group) => (
-              <div key={group.label}>
-                <h4 className="mb-2 text-xs font-bold uppercase text-muted-foreground">
-                  {group.label}
-                </h4>
-                <ChecklistRows
-                  options={group.teams}
-                  explicitMarks={explicitChecklist.team}
-                  derivedMarks={derivedChecklist.team}
-                  onMark={(value, mark) => setRecordMark("team", value, mark)}
-                />
-              </div>
-            ))}
-          </div>
+          {effectiveChecklist.position.F === "yes" ? (
+            <PositionSubtypeSection title="Forward">
+              <ChecklistRows
+                options={FORWARD_POSITION_OPTIONS}
+                explicitMarks={explicitChecklist.position}
+                derivedMarks={derivedChecklist.position}
+                onMark={(value, mark) => setRecordMark("position", value, mark)}
+              />
+            </PositionSubtypeSection>
+          ) : null}
+          {effectiveChecklist.position.D === "yes" ? (
+            <PositionSubtypeSection title="Defense">
+              <ChecklistRows
+                options={DEFENSE_POSITION_OPTIONS}
+                explicitMarks={explicitChecklist.position}
+                derivedMarks={derivedChecklist.position}
+                onMark={(value, mark) => setRecordMark("position", value, mark)}
+              />
+            </PositionSubtypeSection>
+          ) : null}
         </ChecklistSection>
 
         <ChecklistSection
@@ -220,6 +319,59 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
         </ChecklistSection>
 
         <ChecklistSection
+          value="team"
+          title="Team"
+          summaryLabels={getSelectedOptionLabels(TEAM_OPTIONS, effectiveChecklist.team)}
+        >
+          <div className="mb-2 flex items-center gap-2 py-1">
+            <Checkbox
+              id={`show-ruled-out-teams-${opponent.id}`}
+              checked={showRuledOutTeams}
+              onCheckedChange={(checked) => setShowRuledOutTeams(checked === true)}
+            />
+            <label
+              htmlFor={`show-ruled-out-teams-${opponent.id}`}
+              className="cursor-pointer text-sm font-medium"
+            >
+              Show ruled-out teams
+            </label>
+          </div>
+          <Accordion
+            type="multiple"
+            value={expandedTeamDivisions}
+            onValueChange={setExpandedTeamDivisions}
+            className="border-t border-border"
+          >
+            {TEAM_GROUPS.map((group) => {
+              const visibleTeams = group.teams.filter((team) => {
+                const resolved = resolveChecklistMark(
+                  explicitChecklist.team[team.value],
+                  derivedChecklist.team[team.value],
+                );
+                return showRuledOutTeams || resolved.mark !== "no" || resolved.source !== "derived";
+              });
+              if (visibleTeams.length === 0) return null;
+
+              return (
+                <TeamDivisionSection
+                  key={group.label}
+                  value={group.label}
+                  title={group.label}
+                  summaryLabels={getSelectedOptionLabels(group.teams, effectiveChecklist.team)}
+                >
+                  <ChecklistRows
+                    options={visibleTeams}
+                    explicitMarks={explicitChecklist.team}
+                    derivedMarks={derivedChecklist.team}
+                    onMark={(value, mark) => setRecordMark("team", value, mark)}
+                  />
+                </TeamDivisionSection>
+              );
+            })}
+          </Accordion>
+        </ChecklistSection>
+
+        <ChecklistSection
           value="hand"
           title="Hand"
           summaryLabels={getSelectedOptionLabels(HAND_OPTIONS, effectiveChecklist.hand)}
@@ -229,19 +381,6 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
             explicitMarks={explicitChecklist.hand}
             derivedMarks={derivedChecklist.hand}
             onMark={(value, mark) => setRecordMark("hand", value, mark)}
-          />
-        </ChecklistSection>
-
-        <ChecklistSection
-          value="role"
-          title="Line / Role"
-          summaryLabels={getSelectedOptionLabels(ROLE_OPTIONS, effectiveChecklist.role)}
-        >
-          <ChecklistRows
-            options={ROLE_OPTIONS}
-            explicitMarks={explicitChecklist.role}
-            derivedMarks={derivedChecklist.role}
-            onMark={(value, mark) => setRecordMark("role", value, mark)}
           />
         </ChecklistSection>
 
@@ -286,29 +425,28 @@ export function OpponentDeductionCard({ opponent, onUpdate, onDelete }: Props) {
         <ChecklistSection
           value="age"
           title="Age"
-          summaryLabels={getSelectedOptionLabels(AGE_OPTIONS, effectiveChecklist.age)}
+          summaryLabels={opponent.ageText.trim() ? [opponent.ageText.trim()] : []}
         >
-          <ChecklistRows
-            options={AGE_OPTIONS}
-            explicitMarks={explicitChecklist.age}
-            derivedMarks={derivedChecklist.age}
-            onMark={(value, mark) => setRecordMark("age", value, mark)}
+          <ClueTextField
+            label="Age clue"
+            value={opponent.ageText}
+            placeholder="Enter age or age clue"
+            onChange={(value) => setClueText("ageText", value)}
+            onBlur={() => trimClueText("ageText")}
           />
         </ChecklistSection>
 
         <ChecklistSection
           value="jersey-number"
           title="Jersey Number"
-          summaryLabels={getSelectedOptionLabels(
-            JERSEY_NUMBER_OPTIONS,
-            effectiveChecklist.jerseyNumber,
-          )}
+          summaryLabels={opponent.jerseyNumberText.trim() ? [opponent.jerseyNumberText.trim()] : []}
         >
-          <ChecklistRows
-            options={JERSEY_NUMBER_OPTIONS}
-            explicitMarks={explicitChecklist.jerseyNumber}
-            derivedMarks={derivedChecklist.jerseyNumber}
-            onMark={(value, mark) => setRecordMark("jerseyNumber", value, mark)}
+          <ClueTextField
+            label="Jersey number clue"
+            value={opponent.jerseyNumberText}
+            placeholder="Enter number or number clue"
+            onChange={(value) => setClueText("jerseyNumberText", value)}
+            onBlur={() => trimClueText("jerseyNumberText")}
           />
         </ChecklistSection>
 
@@ -367,6 +505,73 @@ function ChecklistSection({
       </AccordionTrigger>
       <AccordionContent className="pb-3">{children}</AccordionContent>
     </AccordionItem>
+  );
+}
+
+function PositionSubtypeSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="mt-3 border-l-2 border-border pl-3">
+      <h4 className="pb-1 text-xs font-bold uppercase text-muted-foreground">{title}</h4>
+      {children}
+    </section>
+  );
+}
+
+function TeamDivisionSection({
+  value,
+  title,
+  summaryLabels,
+  children,
+}: {
+  value: string;
+  title: string;
+  summaryLabels: string[];
+  children: React.ReactNode;
+}) {
+  const summary = uniqueLabels(summaryLabels).join(", ");
+  return (
+    <AccordionItem value={value}>
+      <AccordionTrigger className="group gap-3 py-3 hover:no-underline">
+        <span className="min-w-0 flex-1 break-words text-left font-semibold">
+          {title}
+          {summary ? (
+            <span className="font-medium text-emerald-700 group-data-[state=open]:hidden">
+              {` - ${summary}`}
+            </span>
+          ) : null}
+        </span>
+      </AccordionTrigger>
+      <AccordionContent className="pb-2 pl-2">{children}</AccordionContent>
+    </AccordionItem>
+  );
+}
+
+function ClueTextField({
+  label,
+  value,
+  placeholder,
+  onChange,
+  onBlur,
+}: {
+  label: string;
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+  onBlur: () => void;
+}) {
+  return (
+    <div className="py-1">
+      <label className="sr-only">{label}</label>
+      <input
+        type="text"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
+        placeholder={placeholder}
+        aria-label={label}
+        className="min-h-11 w-full min-w-0 rounded-md border border-border bg-background px-3 py-2.5 text-sm shadow-sm outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
+      />
+    </div>
   );
 }
 

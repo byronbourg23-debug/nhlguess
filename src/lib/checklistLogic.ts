@@ -1,10 +1,8 @@
 import {
-  AGE_OPTIONS,
   CONFERENCE_OPTIONS,
   DIVISION_OPTIONS,
   DIVISION_TO_CONFERENCE,
   HAND_OPTIONS,
-  JERSEY_NUMBER_OPTIONS,
   POSITION_OPTIONS,
   TEAM_GROUPS,
   TEAM_OPTIONS,
@@ -30,11 +28,6 @@ const EXCLUSIVE_GROUPS: ReadonlyArray<{
   { category: "division", values: DIVISION_OPTIONS.map((option) => option.value) },
   { category: "team", values: TEAM_OPTIONS.map((option) => option.value) },
   { category: "hand", values: HAND_OPTIONS.map((option) => option.value) },
-  { category: "age", values: AGE_OPTIONS.map((option) => option.value) },
-  {
-    category: "jerseyNumber",
-    values: JERSEY_NUMBER_OPTIONS.map((option) => option.value),
-  },
 ];
 
 const POSITION_VALUES = POSITION_OPTIONS.map((option) => option.value);
@@ -55,6 +48,10 @@ const POSITION_PARENT: Readonly<Record<string, string>> = {
   LD: "D",
   RD: "D",
 };
+const POSITION_CHILDREN: Readonly<Record<string, readonly string[]>> = {
+  F: ["C", "LW", "RW"],
+  D: ["LD", "RD"],
+};
 
 export function updateExplicitChecklistMark(
   explicit: ExplicitChecklistState,
@@ -64,8 +61,23 @@ export function updateExplicitChecklistMark(
 ): ExplicitChecklistState {
   const next = cloneChecklistState(explicit);
   const currentMark = next[category][value] ?? "neutral";
+
+  if (
+    category === "position" &&
+    selectedMark === "yes" &&
+    currentMark === "neutral" &&
+    POSITION_CHILDREN[value]?.some((child) => next.position[child] === "yes")
+  ) {
+    clearExplicitYes(next.position, POSITION_CHILDREN[value]);
+    return next;
+  }
+
   const nextMark: ChecklistMark = currentMark === selectedMark ? "neutral" : selectedMark;
   next[category][value] = nextMark;
+
+  if (category === "position" && nextMark === "neutral" && POSITION_CHILDREN[value]) {
+    clearExplicitYes(next.position, POSITION_CHILDREN[value]);
+  }
 
   if (nextMark === "yes") reconcileExplicitYes(next, category, value);
   if (nextMark === "no") reconcileExplicitNo(next, category, value);
@@ -125,10 +137,7 @@ export function getEffectiveChecklistState(
     conference: mergeMarkRecords(explicit.conference, derived.conference),
     division: mergeMarkRecords(explicit.division, derived.division),
     hand: mergeMarkRecords(explicit.hand, derived.hand),
-    role: mergeMarkRecords(explicit.role, derived.role),
     nationality: mergeMarkRecords(explicit.nationality, derived.nationality),
-    age: mergeMarkRecords(explicit.age, derived.age),
-    jerseyNumber: mergeMarkRecords(explicit.jerseyNumber, derived.jerseyNumber),
     other: explicit.other.map((item) => ({ ...item })),
   };
 }
@@ -336,10 +345,7 @@ function cloneChecklistState(state: ExplicitChecklistState): ExplicitChecklistSt
     conference: { ...state.conference },
     division: { ...state.division },
     hand: { ...state.hand },
-    role: { ...state.role },
     nationality: { ...state.nationality },
-    age: { ...state.age },
-    jerseyNumber: { ...state.jerseyNumber },
     other: state.other.map((item) => ({ ...item })),
   };
 }

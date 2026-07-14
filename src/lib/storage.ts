@@ -1,12 +1,9 @@
 import {
-  AGE_OPTIONS,
   CONFERENCE_OPTIONS,
   DIVISION_OPTIONS,
   HAND_OPTIONS,
-  JERSEY_NUMBER_OPTIONS,
   NATIONALITY_OPTIONS,
   POSITION_OPTIONS,
-  ROLE_OPTIONS,
   TEAM_OPTIONS,
   createEmptyChecklist,
   isChecklistMark,
@@ -22,6 +19,35 @@ import type {
 
 const KEY = "nhl-guess-helper:v1";
 const SESSIONS_KEY = "nhl-guessing-helper-sessions";
+const LEGACY_ROLE_OPTIONS = [
+  { value: "top6", label: "Top 6" },
+  { value: "top4", label: "Top 4" },
+] as const;
+const LEGACY_AGE_OPTIONS = [
+  { value: "under-20", label: "Under 20" },
+  { value: "20-24", label: "20-24" },
+  { value: "25-29", label: "25-29" },
+  { value: "30-34", label: "30-34" },
+  { value: "35-plus", label: "35 and older" },
+] as const;
+const LEGACY_JERSEY_NUMBER_OPTIONS = [
+  { value: "0-9", label: "0-9" },
+  { value: "10-19", label: "10-19" },
+  { value: "20-29", label: "20-29" },
+  { value: "30-39", label: "30-39" },
+  { value: "40-49", label: "40-49" },
+  { value: "50-59", label: "50-59" },
+  { value: "60-69", label: "60-69" },
+  { value: "70-79", label: "70-79" },
+  { value: "80-89", label: "80-89" },
+  { value: "90-99", label: "90-99" },
+] as const;
+
+type NormalizedOpponentData = {
+  explicitChecklist: ExplicitChecklistState;
+  ageText: string;
+  jerseyNumberText: string;
+};
 
 type LegacyQuestionType =
   | "position"
@@ -57,7 +83,7 @@ export function loadOpponents(): Opponent[] {
 export function saveOpponents(opponents: Opponent[]): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(KEY, JSON.stringify({ opponents }));
+    window.localStorage.setItem(KEY, JSON.stringify({ opponents: normalizeOpponents(opponents) }));
   } catch {
     // localStorage can be unavailable or full; the active UI should keep working.
   }
@@ -188,36 +214,47 @@ function normalizeOpponent(value: unknown): Opponent | null {
     explicitChecklist?: unknown;
     checklist?: unknown;
     rows?: unknown;
+    ageText?: unknown;
+    jerseyNumberText?: unknown;
   };
   const name = typeof raw.name === "string" && raw.name.trim() ? raw.name.trim() : "Opponent";
+  const normalized = raw.explicitChecklist
+    ? normalizeChecklist(raw.explicitChecklist)
+    : raw.checklist
+      ? normalizeChecklist(raw.checklist)
+      : migrateLegacyRows(raw.rows);
 
   return {
     id: typeof raw.id === "string" && raw.id ? raw.id : makeId(),
     name,
-    explicitChecklist: raw.explicitChecklist
-      ? normalizeChecklist(raw.explicitChecklist)
-      : raw.checklist
-        ? normalizeChecklist(raw.checklist)
-        : migrateLegacyRows(raw.rows),
+    explicitChecklist: normalized.explicitChecklist,
+    ageText: normalizeClueText(raw.ageText) || normalized.ageText,
+    jerseyNumberText: normalizeClueText(raw.jerseyNumberText) || normalized.jerseyNumberText,
   };
 }
 
-function normalizeChecklist(value: unknown): ExplicitChecklistState {
+function normalizeChecklist(value: unknown): NormalizedOpponentData {
   const empty = createEmptyChecklist();
-  if (!value || typeof value !== "object") return empty;
+  if (!value || typeof value !== "object") {
+    return { explicitChecklist: empty, ageText: "", jerseyNumberText: "" };
+  }
 
-  const raw = value as Partial<Record<keyof ExplicitChecklistState, unknown>>;
+  const raw = value as Record<string, unknown>;
+  const other = normalizeCustomItems(raw.other);
+  migrateLegacyRoleMarks(other, raw.role);
+
   return {
-    position: normalizeMarkRecord(raw.position, empty.position),
-    team: normalizeMarkRecord(raw.team, empty.team),
-    conference: normalizeMarkRecord(raw.conference, empty.conference),
-    division: normalizeMarkRecord(raw.division, empty.division),
-    hand: normalizeMarkRecord(raw.hand, empty.hand),
-    role: normalizeMarkRecord(raw.role, empty.role),
-    nationality: normalizeMarkRecord(raw.nationality, empty.nationality, true),
-    age: normalizeMarkRecord(raw.age, empty.age),
-    jerseyNumber: normalizeMarkRecord(raw.jerseyNumber, empty.jerseyNumber),
-    other: normalizeCustomItems(raw.other),
+    explicitChecklist: {
+      position: normalizeMarkRecord(raw.position, empty.position),
+      team: normalizeMarkRecord(raw.team, empty.team),
+      conference: normalizeMarkRecord(raw.conference, empty.conference),
+      division: normalizeMarkRecord(raw.division, empty.division),
+      hand: normalizeMarkRecord(raw.hand, empty.hand),
+      nationality: normalizeMarkRecord(raw.nationality, empty.nationality, true),
+      other,
+    },
+    ageText: migrateLegacyMarkText(raw.age, LEGACY_AGE_OPTIONS),
+    jerseyNumberText: migrateLegacyMarkText(raw.jerseyNumber, LEGACY_JERSEY_NUMBER_OPTIONS),
   };
 }
 
@@ -255,9 +292,56 @@ function normalizeCustomItems(value: unknown): ChecklistItemState[] {
     .filter((item): item is ChecklistItemState => Boolean(item));
 }
 
-function migrateLegacyRows(value: unknown): ExplicitChecklistState {
+function migrateLegacyRoleMarks(items: ChecklistItemState[], value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return;
+
+  const marks = value as Record<string, unknown>;
+  LEGACY_ROLE_OPTIONS.forEach((option) => {
+    const mark = marks[option.value];
+    if (mark === "yes" || mark === "no") upsertOtherItem(items, option.label, mark);
+  });
+}
+
+function migrateLegacyMarkText(value: unknown, options: readonly ChecklistOption[]): string {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return "";
+
+  const marks = value as Record<string, unknown>;
+  const yesLabels = options
+    .filter((option) => marks[option.value] === "yes")
+    .map((option) => option.label);
+  const noLabels = options
+    .filter((option) => marks[option.value] === "no")
+    .map((option) => option.label);
+
+  return [yesLabels.join(", "), noLabels.length ? `Not ${noLabels.join(", ")}` : ""]
+    .filter(Boolean)
+    .join("; ");
+}
+
+function normalizeClueText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function upsertOtherItem(
+  items: ChecklistItemState[],
+  label: string,
+  mark: Exclude<ChecklistMark, "neutral">,
+) {
+  const existing = items.find((item) => item.label.toLowerCase() === label.toLowerCase());
+  if (existing) {
+    if (existing.mark === "neutral") existing.mark = mark;
+    return;
+  }
+  items.push({ id: makeId(), label, mark });
+}
+
+function migrateLegacyRows(value: unknown): NormalizedOpponentData {
   const checklist = createEmptyChecklist();
-  if (!Array.isArray(value)) return checklist;
+  let ageText = "";
+  let jerseyNumberText = "";
+  if (!Array.isArray(value)) {
+    return { explicitChecklist: checklist, ageText, jerseyNumberText };
+  }
 
   value.map(normalizeLegacyRow).forEach((row) => {
     if (!row || !row.answer.trim()) return;
@@ -283,31 +367,33 @@ function migrateLegacyRows(value: unknown): ExplicitChecklistState {
         markMatchingOption(checklist.hand, HAND_OPTIONS, normalizeLegacyHand(row.answer));
         break;
       case "top6":
-        checklist.role.top6 = legacyYesNoMark(row.answer);
+        migrateLegacyRoleRow(checklist.other, "Top 6", row.answer);
         break;
       case "top4":
-        checklist.role.top4 = legacyYesNoMark(row.answer);
+        migrateLegacyRoleRow(checklist.other, "Top 4", row.answer);
         break;
       case "country":
         migrateNationality(checklist.nationality, row.answer);
         break;
-      case "age": {
-        const range = legacyAgeRange(row.answer);
-        if (range) checklist.age[range] = "yes";
+      case "age":
+        ageText = row.answer.trim();
+        break;
+      case "jerseyNumber":
+        jerseyNumberText = row.answer.trim();
+        break;
+      case "other": {
+        const item = migrateLegacyOther(row);
+        const duplicate = checklist.other.find(
+          (existing) => existing.label.toLowerCase() === item.label.toLowerCase(),
+        );
+        if (!duplicate) checklist.other.push(item);
+        else if (duplicate.mark === "neutral") duplicate.mark = item.mark;
         break;
       }
-      case "jerseyNumber": {
-        const range = legacyJerseyRange(row.answer);
-        if (range) checklist.jerseyNumber[range] = "yes";
-        break;
-      }
-      case "other":
-        checklist.other.push(migrateLegacyOther(row));
-        break;
     }
   });
 
-  return checklist;
+  return { explicitChecklist: checklist, ageText, jerseyNumberText };
 }
 
 function normalizeLegacyRow(value: unknown): LegacyDeductionRow | null {
@@ -364,34 +450,9 @@ function legacyYesNoMark(answer: string): ChecklistMark {
   return "neutral";
 }
 
-function legacyAgeRange(answer: string): string | null {
-  const direct = AGE_OPTIONS.find(
-    (option) =>
-      option.value.toLowerCase() === answer.trim().toLowerCase() ||
-      option.label.toLowerCase() === answer.trim().toLowerCase(),
-  );
-  if (direct) return direct.value;
-
-  const age = Number.parseInt(answer, 10);
-  if (!Number.isFinite(age)) return null;
-  if (age < 20) return "under-20";
-  if (age <= 24) return "20-24";
-  if (age <= 29) return "25-29";
-  if (age <= 34) return "30-34";
-  return "35-plus";
-}
-
-function legacyJerseyRange(answer: string): string | null {
-  const direct = JERSEY_NUMBER_OPTIONS.find(
-    (option) =>
-      option.value.toLowerCase() === answer.trim().toLowerCase() ||
-      option.label.toLowerCase() === answer.trim().toLowerCase(),
-  );
-  if (direct) return direct.value;
-
-  const number = Number.parseInt(answer, 10);
-  if (!Number.isFinite(number) || number < 0 || number > 99) return null;
-  return `${Math.floor(number / 10) * 10}-${Math.floor(number / 10) * 10 + 9}`;
+function migrateLegacyRoleRow(items: ChecklistItemState[], label: string, answer: string) {
+  const mark = legacyYesNoMark(answer);
+  if (mark === "yes" || mark === "no") upsertOtherItem(items, label, mark);
 }
 
 function migrateLegacyOther(row: LegacyDeductionRow): ChecklistItemState {

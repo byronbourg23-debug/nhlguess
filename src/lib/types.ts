@@ -12,10 +12,7 @@ export interface ChecklistState {
   conference: Record<string, ChecklistMark>;
   division: Record<string, ChecklistMark>;
   hand: Record<string, ChecklistMark>;
-  role: Record<string, ChecklistMark>;
   nationality: Record<string, ChecklistMark>;
-  age: Record<string, ChecklistMark>;
-  jerseyNumber: Record<string, ChecklistMark>;
   other: ChecklistItemState[];
 }
 
@@ -33,6 +30,8 @@ export interface Opponent {
   id: string;
   name: string;
   explicitChecklist: ExplicitChecklistState;
+  ageText: string;
+  jerseyNumberText: string;
 }
 
 export interface SavedSession {
@@ -52,6 +51,12 @@ export interface GoalieStats {
   shutouts: number | string;
 }
 
+export interface PreviousTeamEntry {
+  year: string;
+  team: string;
+  league: string;
+}
+
 export interface NHLPlayer {
   id: number;
   fullName: string;
@@ -61,7 +66,7 @@ export interface NHLPlayer {
   position: string;
   jerseyNumber: number | string;
   shootsCatches: string;
-  previousTeams: string;
+  previousTeams: PreviousTeamEntry[];
   height: string;
   weight: string;
   age: number | string;

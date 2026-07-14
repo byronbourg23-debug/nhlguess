@@ -1,4 +1,4 @@
-import type { NHLPlayer, GoalieStats } from "./types";
+import type { GoalieStats, NHLPlayer, PreviousTeamEntry } from "./types";
 
 export interface SearchResult {
   playerId: string;
@@ -33,6 +33,9 @@ interface TeamSeasonTotal {
   leagueAbbrev?: string;
   leagueName?: LocalizedValue;
   league?: string | LocalizedValue;
+  season?: number | string;
+  sequence?: number;
+  gameTypeId?: number;
 }
 
 interface NHLApiPlayer {
@@ -92,6 +95,53 @@ export async function getPlayerDetails(playerId: string | number): Promise<NHLAp
 
 const NA = "N/A" as const;
 
+const POSITION_LABELS: Readonly<Record<string, string>> = {
+  c: "Center",
+  center: "Center",
+  l: "Left Wing",
+  lw: "Left Wing",
+  "left wing": "Left Wing",
+  r: "Right Wing",
+  rw: "Right Wing",
+  "right wing": "Right Wing",
+  f: "Forward",
+  forward: "Forward",
+  d: "Defense",
+  defense: "Defense",
+  ld: "Left Defense",
+  "left defense": "Left Defense",
+  rd: "Right Defense",
+  "right defense": "Right Defense",
+  g: "Goalie",
+  goalie: "Goalie",
+};
+
+const NATION_LABELS: Readonly<Record<string, string>> = {
+  AUT: "Austria",
+  BLR: "Belarus",
+  CAN: "Canada",
+  CHE: "Switzerland",
+  CZE: "Czechia",
+  DEU: "Germany",
+  DNK: "Denmark",
+  EST: "Estonia",
+  FIN: "Finland",
+  FRA: "France",
+  GBR: "United Kingdom",
+  KAZ: "Kazakhstan",
+  LTU: "Lithuania",
+  LVA: "Latvia",
+  NLD: "Netherlands",
+  NOR: "Norway",
+  POL: "Poland",
+  RUS: "Russia",
+  SVK: "Slovakia",
+  SVN: "Slovenia",
+  SWE: "Sweden",
+  UKR: "Ukraine",
+  USA: "United States",
+};
+
 const TEAM_META: Record<string, { conference: string; division: string; names: string[] }> = {
   ANA: { conference: "West", division: "Pacific", names: ["Anaheim Ducks", "Ducks"] },
   BOS: { conference: "East", division: "Atlantic", names: ["Boston Bruins", "Bruins"] },
@@ -133,6 +183,17 @@ const TEAM_META: Record<string, { conference: string; division: string; names: s
 
 function pick<T>(v: T | undefined | null, fallback: typeof NA = NA): T | typeof NA {
   return v === undefined || v === null || v === "" ? fallback : v;
+}
+
+function normalizePosition(value?: string): string {
+  const normalized = value?.trim().toLowerCase();
+  return normalized ? (POSITION_LABELS[normalized] ?? NA) : NA;
+}
+
+function normalizeNation(value?: string): string {
+  const normalized = value?.trim();
+  if (!normalized) return NA;
+  return NATION_LABELS[normalized.toUpperCase()] ?? (normalized.length > 3 ? normalized : NA);
 }
 
 function calcAge(birthDate?: string): number | string {
@@ -201,6 +262,7 @@ function normalizeLeagueLabel(league: string): string {
     WHC: "World Championship",
   };
 
+  if (/^WJC(?:-|$)/.test(upper)) return "World Juniors";
   return tournamentLabels[upper] ?? normalized;
 }
 
@@ -246,7 +308,22 @@ function formatNationalTeamName(team: string, abbrev?: string): string {
   return team;
 }
 
-function formatPreviousTeam(value: TeamSeasonTotal, currentNames: Set<string>): string | null {
+function normalizeSeason(value: TeamSeasonTotal["season"]): string {
+  const season = String(value ?? "").trim();
+  if (!season) return NA;
+  if (/^\d{8}$/.test(season)) return `${season.slice(0, 4)}-${season.slice(-2)}`;
+  return season;
+}
+
+function getSeasonSortValue(value: TeamSeasonTotal["season"]): number {
+  const season = Number.parseInt(String(value ?? ""), 10);
+  return Number.isFinite(season) ? season : Number.MAX_SAFE_INTEGER;
+}
+
+function normalizePreviousTeam(
+  value: TeamSeasonTotal,
+  currentNames: Set<string>,
+): PreviousTeamEntry | null {
   const team = getTeamName(value).trim();
   const abbrev = getTeamAbbrev(value).trim();
   const leagueLabel = normalizeLeagueLabel(getLeague(value));
@@ -256,28 +333,40 @@ function formatPreviousTeam(value: TeamSeasonTotal, currentNames: Set<string>): 
   if (team.toUpperCase() === "PEAC" && !leagueLabel) return null;
 
   if (nhlCommonName) {
-    if (currentNames.has(team) || currentNames.has(abbrev) || currentNames.has(nhlCommonName)) {
+    if ([team, abbrev, nhlCommonName].some((name) => currentNames.has(name.toLowerCase()))) {
       return null;
     }
-    return nhlCommonName;
+    return {
+      year: normalizeSeason(value.season),
+      team: nhlCommonName,
+      league: leagueLabel || NA,
+    };
   }
 
   if (isNationalTeam(team, abbrev)) {
     if (!isTournamentLeague(leagueLabel)) return null;
-    return `${formatNationalTeamName(team, abbrev)} (${leagueLabel})`;
+    return {
+      year: normalizeSeason(value.season),
+      team: formatNationalTeamName(team, abbrev),
+      league: leagueLabel,
+    };
   }
 
   if (!isUsefulTeamLeague(leagueLabel)) return null;
 
-  return `${team} (${leagueLabel})`;
+  return {
+    year: normalizeSeason(value.season),
+    team,
+    league: leagueLabel,
+  };
 }
 
 function getPreviousTeams(
   raw: NHLApiPlayer,
   currentTeam: string,
   currentTeamAbbrev?: string,
-): string {
-  if (!Array.isArray(raw?.seasonTotals)) return NA;
+): PreviousTeamEntry[] {
+  if (!Array.isArray(raw?.seasonTotals)) return [];
 
   const currentMeta = getTeamMeta(currentTeam, currentTeamAbbrev);
   const currentNames = new Set(
@@ -288,14 +377,37 @@ function getPreviousTeams(
       ...(currentTeamAbbrev && TEAM_META[currentTeamAbbrev]
         ? TEAM_META[currentTeamAbbrev].names
         : []),
-    ].filter((name): name is string => Boolean(name)),
+    ]
+      .filter((name): name is string => Boolean(name))
+      .map((name) => name.toLowerCase()),
   );
 
   const previousTeams = raw.seasonTotals
-    .map((total) => formatPreviousTeam(total, currentNames))
-    .filter((team: string | null): team is string => Boolean(team));
+    .map((total, index) => ({
+      entry: normalizePreviousTeam(total, currentNames),
+      index,
+      season: getSeasonSortValue(total.season),
+      sequence: total.sequence ?? Number.MAX_SAFE_INTEGER,
+    }))
+    .filter(
+      (
+        candidate,
+      ): candidate is {
+        entry: PreviousTeamEntry;
+        index: number;
+        season: number;
+        sequence: number;
+      } => Boolean(candidate.entry),
+    )
+    .sort((a, b) => a.season - b.season || a.sequence - b.sequence || a.index - b.index);
 
-  return Array.from(new Set(previousTeams)).join(", ") || NA;
+  const seen = new Set<string>();
+  return previousTeams.flatMap(({ entry }) => {
+    const key = `${entry.year}\u0000${entry.team}\u0000${entry.league}`.toLowerCase();
+    if (seen.has(key)) return [];
+    seen.add(key);
+    return [entry];
+  });
 }
 
 export function normalizePlayerData(raw: NHLApiPlayer): NHLPlayer {
@@ -304,12 +416,12 @@ export function normalizePlayerData(raw: NHLApiPlayer): NHLPlayer {
   const teamAbbrev = raw?.teamAbbrev;
   const team = [raw?.fullTeamName?.default, teamAbbrev].find((v) => v) || NA;
   const teamMeta = typeof team === "string" ? getTeamMeta(team, teamAbbrev) : undefined;
-  const position = raw?.position ?? NA;
+  const position = normalizePosition(raw?.position);
   const sub = raw?.featuredStats?.regularSeason?.subSeason ?? {};
   const career = raw?.careerTotals?.regularSeason ?? {};
   const stats = { ...career, ...sub };
 
-  const isGoalie = position === "G";
+  const isGoalie = position === "Goalie";
 
   const player: NHLPlayer = {
     id: raw?.playerId ?? 0,
@@ -319,7 +431,7 @@ export function normalizePlayerData(raw: NHLApiPlayer): NHLPlayer {
       raw?.conference?.name ?? raw?.conferenceAbbrev ?? teamMeta?.conference,
     ) as string,
     division: pick(raw?.division?.name ?? raw?.divisionAbbrev ?? teamMeta?.division) as string,
-    position: pick(position) as string,
+    position,
     jerseyNumber: pick(raw?.sweaterNumber),
     shootsCatches: pick(raw?.shootsCatches),
     previousTeams: getPreviousTeams(raw, typeof team === "string" ? team : NA, teamAbbrev),
@@ -328,7 +440,7 @@ export function normalizePlayerData(raw: NHLApiPlayer): NHLPlayer {
     age: calcAge(raw?.birthDate),
     birthDate: pick(raw?.birthDate) as string,
     birthCity: pick(raw?.birthCity?.default) as string,
-    birthCountry: pick(raw?.birthCountry) as string,
+    birthCountry: normalizeNation(raw?.birthCountry),
     gamesPlayed: pick(stats.gamesPlayed),
     goals: pick(stats.goals),
     assists: pick(stats.assists),

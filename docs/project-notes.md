@@ -36,13 +36,13 @@ Should show:
 
 - Player name as card heading
 - Current Team
-- Number
-- Position
 - Conference
 - Division
-- Country/Nationality
+- Position as a full readable name
+- Nation
+- Number
 - Hand
-- Previous Teams / Teams Played For
+- Previous Teams as a collapsed, oldest-first Year / Team / League history
 
 Should NOT show:
 
@@ -68,24 +68,27 @@ Current UI:
 - Manual marks are stored separately from automatic marks
 - Automatic marks are recalculated from manual marks and are labeled `Auto`
 - State is independent per opponent and persists locally
+- Each opponent has compact Expand All and Collapse All controls
 - Custom rows are limited to the Other category
 - Custom nationality entries are supported for uncommon nationalities
 
 Checklist categories:
 
 - Position
-- Team
 - Conference
 - Division
+- Team
 - Hand
-- Line / Role
 - Country / Nationality
 - Age
 - Jersey Number
 - Other
 
-Team options are grouped by Atlantic, Metropolitan, Central, and Pacific.
-Age and jersey number use practical ranges rather than individual values.
+Position starts with Forward, D, and Goalie. Forward reveals LW, C, and RW when selected; D
+reveals LD and RD. Team options are grouped into independently collapsible Atlantic,
+Metropolitan, Central, and Pacific sections. Automatically ruled-out teams are hidden unless
+`Show ruled-out teams` is enabled. Age and jersey number are free-text clue fields and do not
+propagate.
 
 Deterministic checklist relationships:
 
@@ -96,9 +99,10 @@ Deterministic checklist relationships:
 - A Team Yes mark sets its division and conference and rules out every other team.
 - Excluding every option but one in an exclusive category marks the remaining option Yes.
 
-Line / Role, nationality, and Other entries do not propagate because their relationships are not
-strictly deterministic. Only explicit marks are persisted. Derived marks are recomputed after load
-or refresh so changing a source cannot leave stale automatic marks.
+Nationality and Other entries do not propagate because their relationships are not strictly
+deterministic. Only explicit marks are persisted. Derived marks are recomputed after load or
+refresh so changing a source cannot leave stale automatic marks. Older Top 6 and Top 4 marks are
+migrated into Other; older age and jersey range marks are migrated into readable clue text.
 
 ## Save
 
